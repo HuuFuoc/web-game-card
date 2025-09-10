@@ -22,3 +22,21 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Visual Studio workspace and metadata files
+.vs/
+*.db
+*.sqlite
+*.wsuo
+*.vsdx
+*.user
+*.cache
+*.pdb
+
+# Workspace state and layout files
+src/.vs/
+src/**/*.wsuo
+src/**/*.db
+src/**/*.sqlite
+src/**/*.vsdx
+src/**/*.json
