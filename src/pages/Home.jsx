@@ -33,8 +33,9 @@ const Home = () => {
           </p>
           <Link
             to="/"
-            className="bg-white text-[#0c1022] font-bold px-8 py-4 rounded-lg shadow-lg border-2 border-pink-500 hover:bg-pink-500 hover:text-white transition flex items-center gap-2"
-          >
+            className="bg-white text-[#0c1022] font-bold px-8 py-4 rounded-lg shadow-lg border-2 border-pink-500
+            hover:bg-pink-500 hover:text-black hover:scale-105 hover:shadow-2xl transition-transform transition-shadow duration-200 flex items-center gap-2"
+            >
             READ MORE
             <span className="text-pink-500 text-xl">&#xBB;</span>
           </Link>
