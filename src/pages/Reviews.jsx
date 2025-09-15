@@ -110,7 +110,7 @@ const rawData = {
   ],
 };
 
-// 👉 Collapse tất cả node từ đầu
+// Collapse tất cả node từ đầu
 const collapseAll = (node) => {
   if (node.children) {
     node._children = node.children;
@@ -126,9 +126,8 @@ export default function FamilyTree() {
     return [clone];
   });
 
-  const [hoveredNode, setHoveredNode] = useState(null);
+  const [selectedNodeName, setSelectedNodeName] = useState(null);
 
-  // 👉 Toggle expand/collapse
   const handleToggle = (nodeName, node) => {
     if (node.name === nodeName) {
       if (node.children) {
@@ -148,14 +147,15 @@ export default function FamilyTree() {
     const clone = JSON.parse(JSON.stringify(treeData[0]));
     handleToggle(nodeDatum.name, clone);
     setTreeData([clone]);
+
+    setSelectedNodeName(nodeDatum.name);
   };
 
   return (
     <div className="review-container">
       <h2 className="review-title">CÂY GIA PHẢ</h2>
       <div style={{ display: "flex", height: "100%" }}>
-        {/* Cây gia phả */}
-        <div className="tree-wrapper" style={{ flex: 3 }}>
+        <div className="tree-wrapper" style={{ flex: 1 }}>
           <Tree
             data={treeData}
             orientation="vertical"
@@ -165,26 +165,12 @@ export default function FamilyTree() {
             renderCustomNodeElement={({ nodeDatum }) => {
               const hasChildren = nodeDatum.children || nodeDatum._children;
               const isCollapsed = !!nodeDatum._children;
+              const isSelected = nodeDatum.name === selectedNodeName;
+
               return (
-                <g
-                  onClick={() => onNodeClick(nodeDatum)}
-                  onMouseEnter={() => setHoveredNode(nodeDatum)}
-                  onMouseLeave={() => setHoveredNode(null)}
-                  style={{ cursor: "pointer" }}
-                >
-                  <circle
-                    r={28}
-                    fill="lightblue"
-                    stroke="steelblue"
-                    strokeWidth="2"
-                  />
-                  <text
-                    fill="black"
-                    x="35"
-                    dy="5"
-                    fontSize="16px"
-                    fontWeight="700"
-                  >
+                <g onClick={() => onNodeClick(nodeDatum)} style={{ cursor: "pointer" }}>
+                  <circle r={28} fill="lightblue" stroke="steelblue" strokeWidth="2" />
+                  <text fill="black" x="35" dy="5" fontSize="16px" fontWeight="700">
                     {nodeDatum.name}
                   </text>
                   {hasChildren && (
@@ -197,35 +183,33 @@ export default function FamilyTree() {
                       {isCollapsed ? "+" : "−"}
                     </text>
                   )}
+
+                  {/* Khung thông tin nhỏ bên cạnh node */}
+                  {isSelected && nodeDatum.info && (
+                    <g transform="translate(50, -10)">
+                      <rect
+                        x={0}
+                        y={0}
+                        width={150}
+                        height={50}
+                        fill="rgba(255, 255, 255, 1)"
+                        rx={8}
+                        ry={8}
+                      />
+                      <text
+                        x={10}
+                        y={25}
+                        fill="white"
+                        fontSize="12px"
+                      >
+                        {nodeDatum.info}
+                      </text>
+                    </g>
+                  )}
                 </g>
               );
             }}
           />
-        </div>
-
-        {/* Khung hiển thị thông tin */}
-        <div
-  style={{
-    flex: 0.6,                     // ✅ nhỏ hơn
-    padding: "12px 16px",          // ✅ padding gọn lại
-    background: "rgba(255,255,255,0.1)",
-    borderRadius: "10px",
-    marginLeft: "12px",
-    minWidth: "160px",             // ✅ khung hẹp lại
-    maxWidth: "200px",             // ✅ không quá to
-    fontSize: "0.9rem",            // ✅ chữ nhỏ gọn
-    color: "#fff",
-  }}
->
-
-          {hoveredNode ? (
-            <>
-              <h3 style={{ marginTop: 0 }}>{hoveredNode.name}</h3>
-              <p>{hoveredNode.info || "Không có thông tin"}</p>
-            </>
-          ) : (
-            <p>👉 Di chuột vào node để xem thông tin</p>
-          )}
         </div>
       </div>
     </div>
