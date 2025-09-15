@@ -1,153 +1,232 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useState } from "react";
 import Tree from "react-d3-tree";
 import "../Reviews.css";
 
-/* Dữ liệu ví dụ (nhiều nhánh) */
-const familyData = {
+const rawData = {
   name: "Ông Tổ",
-  avatar: "/ongto.png",  // 👉 ảnh để import (đặt trong public hoặc import từ src/assets)
+  info: "Người khai sinh dòng họ",
   children: [
     {
-      name: "Nhánh A",
+      name: "Con trai 1",
+      info: "Thông tin chi tiết Con trai 1",
       children: [
+        { name: "Cháu 1.1", info: "Thông tin Cháu 1.1" },
+        { name: "Cháu 1.2", info: "Thông tin Cháu 1.2" },
         {
-          name: "Con A1",
+          name: "Cháu 1.3",
+          info: "Thông tin Cháu 1.3",
           children: [
-            { name: "Cháu A1-1" },
-            { name: "Cháu A1-2" },
+            { name: "Chắt 1.3.1", info: "Thông tin Chắt 1.3.1" },
+            { name: "Chắt 1.3.2", info: "Thông tin Chắt 1.3.2" },
             {
-              name: "Cháu A1-3",
+              name: "Chắt 1.3.3",
+              info: "Thông tin Chắt 1.3.3",
               children: [
-                { name: "Chắt A1-3-1" },
-                { name: "Chắt A1-3-2" },
-                { name: "Chắt A1-3-3" },
+                { name: "Hậu duệ 1.3.3.1", info: "Thông tin Hậu duệ 1.3.3.1" },
+                { name: "Hậu duệ 1.3.3.2", info: "Thông tin Hậu duệ 1.3.3.2" },
+                { name: "Hậu duệ 1.3.3.3", info: "Thông tin Hậu duệ 1.3.3.3" },
               ],
             },
-          ],
-        },
-        {
-          name: "Con A2",
-          children: [
-            { name: "Cháu A2-1" },
-            { name: "Cháu A2-2" },
           ],
         },
       ],
     },
     {
-      name: "Nhánh B",
+      name: "Con trai 2",
+      info: "Thông tin Con trai 2",
       children: [
+        { name: "Cháu 2.1", info: "Thông tin Cháu 2.1" },
+        { name: "Cháu 2.2", info: "Thông tin Cháu 2.2" },
         {
-          name: "Con B1",
-          children: [{ name: "Cháu B1-1" }, { name: "Cháu B1-2" }],
+          name: "Cháu 2.3",
+          info: "Thông tin Cháu 2.3",
+          children: [
+            { name: "Chắt 2.3.1", info: "Thông tin Chắt 2.3.1" },
+            { name: "Chắt 2.3.2", info: "Thông tin Chắt 2.3.2" },
+            { name: "Chắt 2.3.3", info: "Thông tin Chắt 2.3.3" },
+          ],
         },
+      ],
+    },
+    {
+      name: "Con trai 3",
+      info: "Thông tin Con trai 3",
+      children: [
+        { name: "Cháu 3.1", info: "Thông tin Cháu 3.1" },
+        { name: "Cháu 3.2", info: "Thông tin Cháu 3.2" },
+        { name: "Cháu 3.3", info: "Thông tin Cháu 3.3" },
         {
-          name: "Con B2",
-          children: [{ name: "Cháu B2-1" }, { name: "Cháu B2-2" }],
+          name: "Cháu 3.4",
+          info: "Thông tin Cháu 3.4",
+          children: [
+            { name: "Chắt 3.4.1", info: "Thông tin Chắt 3.4.1" },
+            { name: "Chắt 3.4.2", info: "Thông tin Chắt 3.4.2" },
+            {
+              name: "Chắt 3.4.3",
+              info: "Thông tin Chắt 3.4.3",
+              children: [
+                { name: "Hậu duệ 3.4.3.1", info: "Thông tin Hậu duệ 3.4.3.1" },
+                { name: "Hậu duệ 3.4.3.2", info: "Thông tin Hậu duệ 3.4.3.2" },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      name: "Con gái 1",
+      info: "Thông tin Con gái 1",
+      children: [
+        { name: "Cháu gái 1.1", info: "Thông tin Cháu gái 1.1" },
+        { name: "Cháu gái 1.2", info: "Thông tin Cháu gái 1.2" },
+        {
+          name: "Cháu gái 1.3",
+          info: "Thông tin Cháu gái 1.3",
+          children: [
+            { name: "Chắt gái 1.3.1", info: "Thông tin Chắt gái 1.3.1" },
+            { name: "Chắt gái 1.3.2", info: "Thông tin Chắt gái 1.3.2" },
+          ],
+        },
+      ],
+    },
+    {
+      name: "Con gái 2",
+      info: "Thông tin Con gái 2",
+      children: [
+        { name: "Cháu gái 2.1", info: "Thông tin Cháu gái 2.1" },
+        { name: "Cháu gái 2.2", info: "Thông tin Cháu gái 2.2" },
+        { name: "Cháu gái 2.3", info: "Thông tin Cháu gái 2.3" },
+        {
+          name: "Cháu gái 2.4",
+          info: "Thông tin Cháu gái 2.4",
+          children: [
+            { name: "Chắt gái 2.4.1", info: "Thông tin Chắt gái 2.4.1" },
+            { name: "Chắt gái 2.4.2", info: "Thông tin Chắt gái 2.4.2" },
+            { name: "Chắt gái 2.4.3", info: "Thông tin Chắt gái 2.4.3" },
+          ],
         },
       ],
     },
   ],
 };
 
-export default function Reviews() {
-  const wrapperRef = useRef(null);
-  const [size, setSize] = useState({ width: 800, height: 600 });
+// 👉 Collapse tất cả node từ đầu
+const collapseAll = (node) => {
+  if (node.children) {
+    node._children = node.children;
+    node._children.forEach(collapseAll);
+    node.children = null;
+  }
+};
 
-  useEffect(() => {
-    const el = wrapperRef.current;
-    if (!el) return;
+export default function FamilyTree() {
+  const [treeData, setTreeData] = useState(() => {
+    const clone = JSON.parse(JSON.stringify(rawData));
+    collapseAll(clone);
+    return [clone];
+  });
 
-    const setElSize = (rect) => {
-      setSize({
-        width: Math.max(300, Math.floor(rect.width)),
-        height: Math.max(300, Math.floor(rect.height)),
-      });
-    };
+  const [hoveredNode, setHoveredNode] = useState(null);
 
-    setElSize(el.getBoundingClientRect());
-
-    let ro = null;
-    if (typeof ResizeObserver !== "undefined") {
-      ro = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          setElSize(entry.contentRect);
-        }
-      });
-      ro.observe(el);
+  // 👉 Toggle expand/collapse
+  const handleToggle = (nodeName, node) => {
+    if (node.name === nodeName) {
+      if (node.children) {
+        node._children = node.children;
+        node.children = null;
+      } else if (node._children) {
+        node.children = node._children;
+        node._children = null;
+      }
     } else {
-      const onResize = () => setElSize(el.getBoundingClientRect());
-      window.addEventListener("resize", onResize);
-      return () => window.removeEventListener("resize", onResize);
+      if (node.children) node.children.forEach((c) => handleToggle(nodeName, c));
+      if (node._children) node._children.forEach((c) => handleToggle(nodeName, c));
     }
+  };
 
-    return () => {
-      if (ro) ro.disconnect();
-    };
-  }, []);
-
-  const translate = { x: Math.round(size.width / 2), y: 100 };
-
-  // Custom node: hình tròn + tên ở dưới
-  const renderCircleNode = ({ nodeDatum }) => (
-  <g>
-    {nodeDatum.avatar ? (
-      // Nếu có avatar thì hiển thị ảnh bo tròn
-      <image
-        href={nodeDatum.avatar}
-        x={-40} // canh giữa
-        y={-40}
-        width={80}
-        height={80}
-        clipPath="circle(40px at 40px 40px)"
-      />
-    ) : (
-      // Nếu không thì hiển thị vòng tròn gradient
-      <circle
-        r={40}
-        fill="url(#purpleGradient)"
-        stroke="#fff"
-        strokeWidth={3}
-      />
-    )}
-
-    {/* Tên hiển thị bên dưới */}
-    <text
-      x={0}
-      y={60}
-      textAnchor="middle"
-      fontSize={14}
-      fontWeight="600"
-      fill="#fff"
-    >
-      {nodeDatum.name}
-    </text>
-  </g>
-);
-
+  const onNodeClick = (nodeDatum) => {
+    const clone = JSON.parse(JSON.stringify(treeData[0]));
+    handleToggle(nodeDatum.name, clone);
+    setTreeData([clone]);
+  };
 
   return (
     <div className="review-container">
-      <h2 className="review-title">Cây gia phả</h2>
-
-      <div ref={wrapperRef} className="tree-wrapper">
-        {size.width > 0 && size.height > 0 && (
+      <h2 className="review-title">CÂY GIA PHẢ</h2>
+      <div style={{ display: "flex", height: "100%" }}>
+        {/* Cây gia phả */}
+        <div className="tree-wrapper" style={{ flex: 3 }}>
           <Tree
-            data={familyData}
+            data={treeData}
             orientation="vertical"
-            translate={translate}
-            svgProps={{
-              width: size.width,
-              height: size.height,
-              style: { width: "100%", height: "100%" },
+            translate={{ x: 600, y: 80 }}
+            nodeSize={{ x: 250, y: 150 }}
+            collapsible={false}
+            renderCustomNodeElement={({ nodeDatum }) => {
+              const hasChildren = nodeDatum.children || nodeDatum._children;
+              const isCollapsed = !!nodeDatum._children;
+              return (
+                <g
+                  onClick={() => onNodeClick(nodeDatum)}
+                  onMouseEnter={() => setHoveredNode(nodeDatum)}
+                  onMouseLeave={() => setHoveredNode(null)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <circle
+                    r={28}
+                    fill="lightblue"
+                    stroke="steelblue"
+                    strokeWidth="2"
+                  />
+                  <text
+                    fill="black"
+                    x="35"
+                    dy="5"
+                    fontSize="16px"
+                    fontWeight="700"
+                  >
+                    {nodeDatum.name}
+                  </text>
+                  {hasChildren && (
+                    <text
+                      x="0"
+                      y="-35"
+                      textAnchor="middle"
+                      style={{ fontSize: "20px", fontWeight: "bold" }}
+                    >
+                      {isCollapsed ? "+" : "−"}
+                    </text>
+                  )}
+                </g>
+              );
             }}
-            zoomable={true}
-            scaleExtent={[0.1, 2]}
-            nodeSize={{ x: 220, y: 180 }} // tăng khoảng cách giữa node
-            separation={{ siblings: 1, nonSiblings: 1.4 }}
-            renderCustomNodeElement={renderCircleNode}
           />
-        )}
+        </div>
+
+        {/* Khung hiển thị thông tin */}
+        <div
+  style={{
+    flex: 0.6,                     // ✅ nhỏ hơn
+    padding: "12px 16px",          // ✅ padding gọn lại
+    background: "rgba(255,255,255,0.1)",
+    borderRadius: "10px",
+    marginLeft: "12px",
+    minWidth: "160px",             // ✅ khung hẹp lại
+    maxWidth: "200px",             // ✅ không quá to
+    fontSize: "0.9rem",            // ✅ chữ nhỏ gọn
+    color: "#fff",
+  }}
+>
+
+          {hoveredNode ? (
+            <>
+              <h3 style={{ marginTop: 0 }}>{hoveredNode.name}</h3>
+              <p>{hoveredNode.info || "Không có thông tin"}</p>
+            </>
+          ) : (
+            <p>👉 Di chuột vào node để xem thông tin</p>
+          )}
+        </div>
       </div>
     </div>
   );

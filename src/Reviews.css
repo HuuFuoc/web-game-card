@@ -43,12 +43,12 @@ body {
 
 /* Wrapper thực sự chứa svg tree - cần chiếm toàn bộ không gian còn lại */
 .tree-wrapper {
-  flex: 1 1 auto;
   width: 100%;
-  height: calc(100% - 56px); /* dành chỗ cho tiêu đề nếu cần */
-  position: relative;
-  overflow: auto; /* nếu cây vượt quá kích thước hiển thị, cho scroll */
+  height: 100vh; /* Full chiều cao màn hình */
+  background: linear-gradient(to right, #8e2de2, #ff0080);
+  overflow: auto; /* Có scroll nếu cây quá dài */
 }
+
 
 /* Ép svg bên trong tree fill 100% wrapper (quan trọng) */
 .tree-wrapper > svg,
