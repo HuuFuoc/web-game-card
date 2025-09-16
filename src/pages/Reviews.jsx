@@ -8,25 +8,32 @@ const rawData = {
   children: [
     {
       name: "Con trai 1",
-      info: "Thông tin chi tiết Con trai 1",
+      info: "Thông tin Con trai 1",
       children: [
-        { name: "Cháu 1.1", info: "Thông tin Cháu 1.1" },
-        { name: "Cháu 1.2", info: "Thông tin Cháu 1.2" },
+        
+        {
+          name: "Cháu 1.2",
+          info: "Thông tin Cháu 1.2",
+          children: [
+            { name: "Chắt 1.2.1", info: "Thông tin Chắt 1.2.1" },
+            { name: "Chắt 1.2.2", info: "Thông tin Chắt 1.2.2" },
+            
+          ],
+        },
         {
           name: "Cháu 1.3",
           info: "Thông tin Cháu 1.3",
           children: [
-            { name: "Chắt 1.3.1", info: "Thông tin Chắt 1.3.1" },
-            { name: "Chắt 1.3.2", info: "Thông tin Chắt 1.3.2" },
             {
-              name: "Chắt 1.3.3",
-              info: "Thông tin Chắt 1.3.3",
+              name: "Chắt 1.3.1",
+              info: "Thông tin Chắt 1.3.1",
               children: [
-                { name: "Hậu duệ 1.3.3.1", info: "Thông tin Hậu duệ 1.3.3.1" },
-                { name: "Hậu duệ 1.3.3.2", info: "Thông tin Hậu duệ 1.3.3.2" },
-                { name: "Hậu duệ 1.3.3.3", info: "Thông tin Hậu duệ 1.3.3.3" },
+                { name: "Hậu duệ 1.3.1.1", info: "Thông tin Hậu duệ 1.3.1.1" },
+                { name: "Hậu duệ 1.3.1.2", info: "Thông tin Hậu duệ 1.3.1.2" },
               ],
             },
+            { name: "Chắt 1.3.2", info: "Thông tin Chắt 1.3.2" },
+            
           ],
         },
       ],
@@ -35,74 +42,22 @@ const rawData = {
       name: "Con trai 2",
       info: "Thông tin Con trai 2",
       children: [
-        { name: "Cháu 2.1", info: "Thông tin Cháu 2.1" },
-        { name: "Cháu 2.2", info: "Thông tin Cháu 2.2" },
+        
         {
           name: "Cháu 2.3",
           info: "Thông tin Cháu 2.3",
           children: [
             { name: "Chắt 2.3.1", info: "Thông tin Chắt 2.3.1" },
             { name: "Chắt 2.3.2", info: "Thông tin Chắt 2.3.2" },
-            { name: "Chắt 2.3.3", info: "Thông tin Chắt 2.3.3" },
           ],
         },
-      ],
-    },
-    {
-      name: "Con trai 3",
-      info: "Thông tin Con trai 3",
-      children: [
-        { name: "Cháu 3.1", info: "Thông tin Cháu 3.1" },
-        { name: "Cháu 3.2", info: "Thông tin Cháu 3.2" },
-        { name: "Cháu 3.3", info: "Thông tin Cháu 3.3" },
         {
-          name: "Cháu 3.4",
-          info: "Thông tin Cháu 3.4",
+          name: "Cháu 2.4",
+          info: "Thông tin Cháu 2.4",
           children: [
-            { name: "Chắt 3.4.1", info: "Thông tin Chắt 3.4.1" },
-            { name: "Chắt 3.4.2", info: "Thông tin Chắt 3.4.2" },
-            {
-              name: "Chắt 3.4.3",
-              info: "Thông tin Chắt 3.4.3",
-              children: [
-                { name: "Hậu duệ 3.4.3.1", info: "Thông tin Hậu duệ 3.4.3.1" },
-                { name: "Hậu duệ 3.4.3.2", info: "Thông tin Hậu duệ 3.4.3.2" },
-              ],
-            },
-          ],
-        },
-      ],
-    },
-    {
-      name: "Con gái 1",
-      info: "Thông tin Con gái 1",
-      children: [
-        { name: "Cháu gái 1.1", info: "Thông tin Cháu gái 1.1" },
-        { name: "Cháu gái 1.2", info: "Thông tin Cháu gái 1.2" },
-        {
-          name: "Cháu gái 1.3",
-          info: "Thông tin Cháu gái 1.3",
-          children: [
-            { name: "Chắt gái 1.3.1", info: "Thông tin Chắt gái 1.3.1" },
-            { name: "Chắt gái 1.3.2", info: "Thông tin Chắt gái 1.3.2" },
-          ],
-        },
-      ],
-    },
-    {
-      name: "Con gái 2",
-      info: "Thông tin Con gái 2",
-      children: [
-        { name: "Cháu gái 2.1", info: "Thông tin Cháu gái 2.1" },
-        { name: "Cháu gái 2.2", info: "Thông tin Cháu gái 2.2" },
-        { name: "Cháu gái 2.3", info: "Thông tin Cháu gái 2.3" },
-        {
-          name: "Cháu gái 2.4",
-          info: "Thông tin Cháu gái 2.4",
-          children: [
-            { name: "Chắt gái 2.4.1", info: "Thông tin Chắt gái 2.4.1" },
-            { name: "Chắt gái 2.4.2", info: "Thông tin Chắt gái 2.4.2" },
-            { name: "Chắt gái 2.4.3", info: "Thông tin Chắt gái 2.4.3" },
+            { name: "Chắt 2.4.1", info: "Thông tin Chắt 2.4.1" },
+            { name: "Chắt 2.4.2", info: "Thông tin Chắt 2.4.2" },
+           
           ],
         },
       ],
@@ -126,8 +81,11 @@ export default function FamilyTree() {
     return [clone];
   });
 
-  const [selectedNodeName, setSelectedNodeName] = useState(null);
+  const [selectedNodeName, setSelectedNodeName] = useState(null); 
+  const [selectedNodeForAdd, setSelectedNodeForAdd] = useState(null); 
+  const [newNodeName, setNewNodeName] = useState("");
 
+  // Toggle expand/collapse
   const handleToggle = (nodeName, node) => {
     if (node.name === nodeName) {
       if (node.children) {
@@ -143,17 +101,71 @@ export default function FamilyTree() {
     }
   };
 
+  // Khi click node
   const onNodeClick = (nodeDatum) => {
     const clone = JSON.parse(JSON.stringify(treeData[0]));
     handleToggle(nodeDatum.name, clone);
     setTreeData([clone]);
 
-    setSelectedNodeName(nodeDatum.name);
+    if (selectedNodeName === nodeDatum.name) {
+      setSelectedNodeName(null);
+    } else {
+      setSelectedNodeName(nodeDatum.name);
+    }
+
+    setSelectedNodeForAdd(nodeDatum.name);
+  };
+
+  // Hàm thêm node mới
+  const addChildNode = () => {
+    if (!selectedNodeForAdd || !newNodeName.trim()) return;
+
+    const clone = JSON.parse(JSON.stringify(treeData[0]));
+
+    const dfs = (node) => {
+      if (node.name === selectedNodeForAdd) {
+        if (!node.children) node.children = [];
+        node.children.push({ name: newNodeName, info: `Thông tin ${newNodeName}` });
+      } else {
+        if (node.children) node.children.forEach(dfs);
+        if (node._children) node._children.forEach(dfs);
+      }
+    };
+
+    dfs(clone);
+    setTreeData([clone]);
+    setNewNodeName("");
   };
 
   return (
     <div className="review-container">
       <h2 className="review-title">CÂY GIA PHẢ</h2>
+
+      {/* Form thêm node */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          marginBottom: "20px",
+          gap: "10px",
+        }}
+      >
+        <input
+          type="text"
+          placeholder="Tên node mới"
+          value={newNodeName}
+          onChange={(e) => setNewNodeName(e.target.value)}
+          disabled={!selectedNodeForAdd}
+          style={{ color: "black" }} // chữ trong ô nhập màu đen
+        />
+        <button onClick={addChildNode} disabled={!selectedNodeForAdd}>
+          {selectedNodeForAdd
+            ? `Thêm con vào ${selectedNodeForAdd}`
+            : "Chưa chọn node"}
+        </button>
+      </div>
+
       <div style={{ display: "flex", height: "100%" }}>
         <div className="tree-wrapper" style={{ flex: 1 }}>
           <Tree
@@ -168,9 +180,23 @@ export default function FamilyTree() {
               const isSelected = nodeDatum.name === selectedNodeName;
 
               return (
-                <g onClick={() => onNodeClick(nodeDatum)} style={{ cursor: "pointer" }}>
-                  <circle r={28} fill="lightblue" stroke="steelblue" strokeWidth="2" />
-                  <text fill="black" x="35" dy="5" fontSize="16px" fontWeight="700">
+                <g
+                  onClick={() => onNodeClick(nodeDatum)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <circle
+                    r={28}
+                    fill="lightblue"
+                    stroke="steelblue"
+                    strokeWidth="2"
+                  />
+                  <text
+                    fill="black"
+                    x="35"
+                    dy="5"
+                    fontSize="16px"
+                    fontWeight="700"
+                  >
                     {nodeDatum.name}
                   </text>
                   {hasChildren && (
@@ -190,18 +216,15 @@ export default function FamilyTree() {
                       <rect
                         x={0}
                         y={0}
-                        width={150}
+                        width={160}
                         height={50}
-                        fill="rgba(255, 255, 255, 1)"
+                        fill="rgba(240,240,240,1)" // nền xám nhạt
+                        stroke="black"
+                        strokeWidth="1"
                         rx={8}
                         ry={8}
                       />
-                      <text
-                        x={10}
-                        y={25}
-                        fill="white"
-                        fontSize="12px"
-                      >
+                      <text x={10} y={30} fill="black" fontSize="12px">
                         {nodeDatum.info}
                       </text>
                     </g>
