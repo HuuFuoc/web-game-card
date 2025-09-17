@@ -1,113 +1,124 @@
 /* Reviews.css - khung tím & cây fill toàn khung */
 
-:root{
-  --glass-bg: rgba(255,255,255,0.06);
+:root {
+    --glass-bg: rgba(255,255,255,0.06);
 }
 
 /* Body app có thể được style toàn cục, nhưng nếu bạn đã có global css thì bỏ phần body */
 body {
-  margin: 0;
-  padding: 0;
-  font-family: 'Poppins', sans-serif;
-  background: linear-gradient(135deg, #7b2ff7, #f107a3);
-  min-height: 100vh;
-  color: #fff;
+    margin: 0;
+    padding: 0;
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #7b2ff7, #f107a3);
+    min-height: 100vh;
+    color: #fff;
 }
 
 /* Khung chứa cây (to lớn) */
 .review-container {
-  width: 98%;
-  max-width: 16000px;
-  height: 94vh;            /* KHUNG lớn: gần full màn hình */
-  margin: 16px auto;
-  padding: 20px;
-  border-radius: 20px;
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  overflow: hidden;       /* ẩn phần dư, wrapper sẽ scroll nếu cần */
+    width: 98%;
+    max-width: 16000px;
+    height: 94vh; /* KHUNG lớn: gần full màn hình */
+    margin: 16px auto;
+    padding: 20px;
+    border-radius: 20px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: hidden; /* ẩn phần dư, wrapper sẽ scroll nếu cần */
 }
 
 /* Tiêu đề nhỏ ở trên */
 .review-title {
-  margin: 0;
-  padding: 0;
-  font-size: 1.8rem;
-  text-align: center;
-  font-weight: 700;
-  color: #fff;
+    margin: 0;
+    padding: 0;
+    font-size: 1.8rem;
+    text-align: center;
+    font-weight: 700;
+    color: #fff;
 }
 
 /* Wrapper thực sự chứa svg tree - cần chiếm toàn bộ không gian còn lại */
 .tree-wrapper {
-  width: 100%;
-  height: 100vh; /* Full chiều cao màn hình */
-  background: linear-gradient(to right, #8e2de2, #ff0080);
-  overflow: auto; /* Có scroll nếu cây quá dài */
+    width: 100%;
+    height: 100vh; /* Full chiều cao màn hình */
+    background: linear-gradient(to right, #8e2de2, #ff0080);
+    overflow: auto; /* Có scroll nếu cây quá dài */
 }
 
-
-/* Ép svg bên trong tree fill 100% wrapper (quan trọng) */
-.tree-wrapper > svg,
-.tree-wrapper svg {
-  width: 100% !important;
-  height: 100% !important;
-  display: block;
-}
+    /* Ép svg bên trong tree fill 100% wrapper (quan trọng) */
+    .tree-wrapper > svg,
+    .tree-wrapper svg {
+        width: 100% !important;
+        height: 100% !important;
+        display: block;
+    }
 
 /* ----- style đường link và node (tuỳ bạn) ----- */
 .link {
-  fill: none;
-  stroke: rgba(255,255,255,0.85);
-  stroke-width: 2px;
-  stroke-dasharray: 0;
-  transition: all .25s ease;
+    fill: none;
+    stroke: rgba(255,255,255,0.85);
+    stroke-width: 2px;
+    stroke-dasharray: 0;
+    transition: all .25s ease;
 }
 
 .node rect, .custom-node {
-  fill: url(#nodeGradient);
-  stroke: rgba(255,255,255,0.9);
-  stroke-width: 2px;
-  rx: 12px;
-  ry: 12px;
-  filter: drop-shadow(0 8px 20px rgba(0,0,0,0.35));
+    fill: url(#nodeGradient);
+    stroke: rgba(255,255,255,0.9);
+    stroke-width: 2px;
+    rx: 12px;
+    ry: 12px;
+    filter: drop-shadow(0 8px 20px rgba(0,0,0,0.35));
 }
 
 /* Node trong cây */
 .node circle {
-  r: 100; /* Tăng bán kính node lên (mặc định ~12–15) */
-  fill: url(#purpleGradient);
-  stroke: #fff;
-  stroke-width: 3px;
-  transition: all 0.3s ease;
+    r: 100; /* Tăng bán kính node lên (mặc định ~12–15) */
+    fill: url(#purpleGradient);
+    stroke: #fff;
+    stroke-width: 3px;
+    transition: all 0.3s ease;
 }
 
 .node:hover circle {
-  r: 36; /* Hover to hơn chút */
-  filter: drop-shadow(0px 0px 10px rgba(255, 200, 255, 0.9));
+    r: 36; /* Hover to hơn chút */
+    filter: drop-shadow(0px 0px 10px rgba(255, 200, 255, 0.9));
 }
 
 /* Text trong node */
 .node text {
-  font-size: 18px; /* tăng chữ */
-  font-weight: 700;
-  fill: #fff;
-  stroke: #000;
-  stroke-width: 1px;
+    font-size: 18px; /* tăng chữ */
+    font-weight: 700;
+    fill: #fff;
+    stroke: #000;
+    stroke-width: 1px;
 }
-
 
 /* Nếu muốn hover node nổi */
 .node:hover rect, .custom-node:hover {
-  transform-origin: center;
-  transform: scale(1.03);
+    transform-origin: center;
+    transform: scale(1.03);
+}
+
+/* React Flow edge visibility enhancement */
+.react-flow__edge-path {
+    stroke: black !important;
+    stroke-width: 3 !important;
+    filter: drop-shadow(0 0 4px #000);
 }
 
 /* responsive nhỏ */
 @media (max-width: 900px) {
-  .review-container { height: 88vh; padding: 12px; }
-  .node text { font-size: 13px; }
+    .review-container {
+        height: 88vh;
+        padding: 12px;
+    }
+
+    .node text {
+        font-size: 13px;
+    }
 }
