@@ -109,11 +109,12 @@ function CardNode({ data, selected }) {
             <div>{data.label}</div>
             {hovered && (
                 <div
+                    className="card-tooltip-fadein"
                     style={{
                         position: "absolute",
-                        top: -110,
-                        left: "50%",
-                        transform: "translateX(-50%)",
+                        top: -100,
+                        left: "100%",
+                        marginLeft: 12,
                         background: "#333",
                         color: "#fff",
                         padding: "10px 16px",
