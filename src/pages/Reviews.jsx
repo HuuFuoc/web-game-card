@@ -10,27 +10,43 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import "../Reviews.css";
+import Navbar from "../components/MyNavbar";
 
 const cardImg = "https://upload.wikimedia.org/wikipedia/commons/3/3f/Placeholder_view_vector.svg";
 
+// Add more info to initial nodes
 const initialNodes = [
     {
         id: "1",
         type: "cardNode",
         position: { x: 100, y: 100 },
-        data: { label: "A1", img: cardImg },
+        data: {
+            label: "A1",
+            img: cardImg,
+            description: "A1 is a legendary warrior card.",
+            power: 90,
+            rarity: "Legendary"
+        },
     },
     {
         id: "2",
         type: "cardNode",
         position: { x: 400, y: 100 },
-        data: { label: "A2", img: cardImg },
+        data: {
+            label: "A2",
+            img: cardImg,
+            description: "A2 is a defensive guardian card.",
+            power: 70,
+            rarity: "Epic"
+        },
     },
 ];
 
 const initialEdges = [];
 
 function CardNode({ data, selected }) {
+    const [hovered, setHovered] = useState(false);
+
     return (
         <div
             style={{
@@ -49,6 +65,8 @@ function CardNode({ data, selected }) {
                 cursor: "pointer",
                 position: "relative",
             }}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
         >
             {/* Handles for React Flow edges */}
             <Handle
@@ -89,6 +107,31 @@ function CardNode({ data, selected }) {
                 }}
             />
             <div>{data.label}</div>
+            {hovered && (
+                <div
+                    style={{
+                        position: "absolute",
+                        top: -110,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        background: "#333",
+                        color: "#fff",
+                        padding: "10px 16px",
+                        borderRadius: 8,
+                        boxShadow: "0 2px 8px #0008",
+                        whiteSpace: "normal",
+                        zIndex: 100,
+                        pointerEvents: "none",
+                        minWidth: 180,
+                        fontWeight: "normal"
+                    }}
+                >
+                    <div><strong>Name:</strong> {data.label}</div>
+                    <div><strong>Description:</strong> {data.description || "No description"}</div>
+                    <div><strong>Power:</strong> {data.power ?? "?"}</div>
+                    <div><strong>Rarity:</strong> {data.rarity || "Unknown"}</div>
+                </div>
+            )}
         </div>
     );
 }
@@ -127,7 +170,13 @@ export default function Reviews() {
                 id: newId,
                 type: "cardNode",
                 position: { x: newX, y: newY },
-                data: { label: newCardLabel, img: cardImg },
+                data: {
+                    label: newCardLabel,
+                    img: cardImg,
+                    description: `${newCardLabel} is a newly created card.`,
+                    power: Math.floor(Math.random() * 100),
+                    rarity: "Common"
+                },
             },
         ]);
         setNewCardLabel("");
@@ -152,7 +201,13 @@ export default function Reviews() {
                 id: newId,
                 type: "cardNode",
                 position: { x: newX, y: newY },
-                data: { label: newCardLabel, img: cardImg },
+                data: {
+                    label: newCardLabel,
+                    img: cardImg,
+                    description: `Merged from ${nodeA.data.label} and ${nodeB.data.label}.`,
+                    power: Math.floor(((nodeA.data.power ?? 50) + (nodeB.data.power ?? 50)) / 2),
+                    rarity: "Fusion"
+                },
             },
         ]);
         setEdges((eds) => [
@@ -161,14 +216,14 @@ export default function Reviews() {
                 id: `e${selectedNodes[0]}-${newId}`,
                 source: selectedNodes[0],
                 target: newId,
-                type: "step", // <-- elbow/orthogonal line
+                type: "step",
                 style: { stroke: "#fff", strokeWidth: 3 },
             },
             {
                 id: `e${selectedNodes[1]}-${newId}`,
                 source: selectedNodes[1],
                 target: newId,
-                type: "step", // <-- elbow/orthogonal line
+                type: "step",
                 style: { stroke: "#fff", strokeWidth: 3 },
             },
         ]);
@@ -191,13 +246,15 @@ export default function Reviews() {
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 position: "relative",
+                paddingTop: 64, // Prevents content from hiding under the fixed navbar
             }}
         >
+            <Navbar />
             {/* Top bar */}
             <div
                 style={{
                     position: "absolute",
-                    top: 30,
+                    top: 90,
                     left: 40,
                     zIndex: 10,
                     display: "flex",
