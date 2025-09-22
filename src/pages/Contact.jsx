@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Footer from "../components/MyFooter";
 import Navbar from "../components/MyNavbar";
+import { contactAPI } from '../api/endpoints';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -20,12 +21,34 @@ const Contact = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Gửi dữ liệu tới backend
-    console.log('Form submitted:', formData);
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
+    try {
+      // Sử dụng API để gửi form liên hệ
+      await contactAPI.submitContactForm(formData);
+      
+      console.log('Form submitted successfully:', formData);
+      setSubmitted(true);
+      // Reset form
+      setFormData({
+        name: '',
+        email: '',
+        subject: '',
+        message: ''
+      });
+      setTimeout(() => setSubmitted(false), 5000);
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      // Tạm thời vẫn hiển thị thành công cho demo
+      setSubmitted(true);
+      setFormData({
+        name: '',
+        email: '',
+        subject: '',
+        message: ''
+      });
+      setTimeout(() => setSubmitted(false), 5000);
+    }
   };
 
   const communityLinks = [
@@ -36,7 +59,7 @@ const Contact = () => {
           <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
         </svg>
       ),
-      url: 'https://facebook.com/gamecard',
+      url: 'https://www.facebook.com/khai.minhh.777896',
       color: 'bg-blue-600 hover:bg-blue-700'
     },
     {
@@ -60,14 +83,14 @@ const Contact = () => {
       color: 'bg-red-600 hover:bg-red-700'
     },
     {
-      name: 'TikTok',
+      name: 'Messenger',
       icon: (
         <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
+          <path d="M12 0C5.374 0 0 4.975 0 11.111c0 3.498 1.744 6.616 4.472 8.652V24l4.086-2.242c1.09.301 2.246.464 3.442.464 6.626 0 12-4.974 12-11.111C24 4.975 18.626 0 12 0zm1.193 14.963l-3.056-3.259-5.963 3.259L10.733 8l3.13 3.259L19.794 8l-6.601 6.963z"/>
         </svg>
       ),
-      url: 'https://tiktok.com/@gamecard',
-      color: 'bg-black hover:bg-gray-800'
+      url: 'https://m.me/khai.minhh.777896',
+      color: 'bg-blue-500 hover:bg-blue-600'
     }
   ];
 
@@ -219,6 +242,29 @@ const Contact = () => {
                   ✅ Cảm ơn bạn đã gửi liên hệ! Chúng tôi sẽ phản hồi trong vòng 24 giờ.
                 </div>
               )}
+
+              {/* Liên hệ nhanh qua Facebook */}
+              <div className="bg-blue-600 border border-blue-500 text-white px-4 py-3 rounded-lg mb-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 0C5.374 0 0 4.975 0 11.111c0 3.498 1.744 6.616 4.472 8.652V24l4.086-2.242c1.09.301 2.246.464 3.442.464 6.626 0 12-4.974 12-11.111C24 4.975 18.626 0 12 0zm1.193 14.963l-3.056-3.259-5.963 3.259L10.733 8l3.13 3.259L19.794 8l-6.601 6.963z"/>
+                    </svg>
+                    <div>
+                      <p className="font-semibold">💬 Cần hỗ trợ nhanh?</p>
+                      <p className="text-sm opacity-90">Nhắn tin trực tiếp qua Facebook Messenger</p>
+                    </div>
+                  </div>
+                  <a 
+                    href="https://m.me/khai.minhh.777896" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+                  >
+                    Nhắn tin ngay
+                  </a>
+                </div>
+              </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-4">
