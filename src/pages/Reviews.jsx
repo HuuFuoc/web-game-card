@@ -11,6 +11,7 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import "../Reviews.css";
 import Navbar from "../components/MyNavbar";
+import BgImage  from "../assets/slider-bg-1.jpg";
 
 const cardImg = "https://upload.wikimedia.org/wikipedia/commons/3/3f/Placeholder_view_vector.svg";
 
@@ -48,93 +49,214 @@ function CardNode({ data, selected }) {
     const [hovered, setHovered] = useState(false);
 
     return (
+    <div
+        style={{
+            width: 200,
+            height: 280,
+            // <CHANGE> Updated selected state with red theme and more dramatic visual difference
+            background: selected ? "linear-gradient(135deg, #DC2626, #B91C1C)" : "linear-gradient(135deg, #FCA5A5, #F87171)",
+            border: selected ? "4px solid #7F1D1D" : "4px solid #B91C1C",
+            borderRadius: 12,
+            boxShadow: selected ? "0 12px 30px rgba(127, 29, 29, 0.6), 0 0 0 2px #FEF3C7" : "0 8px 20px rgba(185, 28, 28, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            color: "#1F2937",
+            fontWeight: "bold",
+            cursor: "pointer",
+            position: "relative",
+            overflow: "hidden",
+            fontFamily: "serif",
+            // <CHANGE> Added scale effect for selected state
+            transform: selected ? "scale(1.05)" : "scale(1)",
+            transition: "all 0.3s ease",
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+    >
+        {/* <CHANGE> Restored handles for React Flow */}
+        <Handle
+            type="target"
+            position={Position.Top}
+            style={{
+                background: selected ? "linear-gradient(135deg, #F59E0B, #D97706)" : "linear-gradient(135deg, #DC2626, #B91C1C)",
+                width: 14,
+                height: 14,
+                borderRadius: "50%",
+                top: -7,
+                left: "50%",
+                transform: "translateX(-50%)",
+                border: selected ? "3px solid #92400E" : "3px solid #B91C1C",
+                boxShadow: selected ? "0 2px 8px rgba(146, 64, 14, 0.5)" : "0 2px 8px rgba(185, 28, 28, 0.5)",
+            }}
+        />
+        <Handle
+            type="source"
+            position={Position.Bottom}
+            style={{
+                background: selected ? "linear-gradient(135deg, #F59E0B, #D97706)" : "linear-gradient(135deg, #DC2626, #B91C1C)",
+                width: 14,
+                height: 14,
+                borderRadius: "50%",
+                bottom: -7,
+                left: "50%",
+                transform: "translateX(-50%)",
+                border: selected ? "3px solid #92400E" : "3px solid #B91C1C",
+                boxShadow: selected ? "0 2px 8px rgba(146, 64, 14, 0.5)" : "0 2px 8px rgba(185, 28, 28, 0.5)",
+            }}
+        />
+
+        {/* Cost circle - overlapping header */}
         <div
             style={{
-                width: 80,
-                height: 120,
-                background: selected ? "#ffe082" : "#222",
-                border: selected ? "3px solid #ffb300" : "2px solid #444",
-                borderRadius: 10,
-                boxShadow: "0 2px 8px #0008",
+                position: "absolute",
+                top: 12,
+                left: 12,
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                // <CHANGE> Different colors for selected state
+                background: selected ? "linear-gradient(135deg, #FEF3C7, #FDE68A)" : "linear-gradient(135deg, #DC2626, #B91C1C)",
+                border: selected ? "3px solid #F59E0B" : "3px solid #7F1D1D",
                 display: "flex",
-                flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#fff",
+                color: selected ? "#92400E" : "#FEF3C7",
+                fontSize: 14,
                 fontWeight: "bold",
-                cursor: "pointer",
+                zIndex: 10,
+                boxShadow: selected ? "0 2px 8px rgba(245, 158, 11, 0.4)" : "0 2px 8px rgba(127, 29, 29, 0.4)",
+            }}
+        >
+            --
+        </div>
+
+        {/* Header */}
+        <div
+            style={{
+                width: "calc(100% - 16px)",
+                margin: "8px 8px 0 8px",
+                marginTop: "8px",
+                // <CHANGE> Different header colors for selected state
+                background: selected ? "linear-gradient(135deg, #FEF3C7, #FDE68A)" : "linear-gradient(135deg, #FEE2E2, #FECACA)",
+                color: selected ? "#92400E" : "#1F2937",
+                padding: "12px 16px",
+                fontSize: 16,
+                textAlign: "center",
+                borderRadius: "8px 8px 0 0",
+                fontWeight: "bold",
+                textShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                border: selected ? "2px solid #F59E0B" : "2px solid #B91C1C",
+                borderBottom: "none",
                 position: "relative",
             }}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
         >
-            {/* Handles for React Flow edges */}
-            <Handle
-                type="target"
-                position={Position.Top}
-                style={{
-                    background: "#fff",
-                    width: 10,
-                    height: 10,
-                    borderRadius: "50%",
-                    top: -5,
-                    left: 35,
-                    border: "2px solid #3949ab",
-                }}
-            />
-            <Handle
-                type="source"
-                position={Position.Bottom}
-                style={{
-                    background: "#fff",
-                    width: 10,
-                    height: 10,
-                    borderRadius: "50%",
-                    bottom: -5,
-                    left: 35,
-                    border: "2px solid #ffb300",
-                }}
-            />
-            <img
-                src={data.img}
-                alt={data.label}
-                style={{
-                    width: 60,
-                    height: 60,
-                    borderRadius: 6,
-                    marginBottom: 8,
-                    background: "#fff",
-                }}
-            />
-            <div>{data.label}</div>
-            {hovered && (
-                <div
-                    className="card-tooltip-fadein"
-                    style={{
-                        position: "absolute",
-                        top: -100,
-                        left: "100%",
-                        marginLeft: 12,
-                        background: "#333",
-                        color: "#fff",
-                        padding: "10px 16px",
-                        borderRadius: 8,
-                        boxShadow: "0 2px 8px #0008",
-                        whiteSpace: "normal",
-                        zIndex: 100,
-                        pointerEvents: "none",
-                        minWidth: 180,
-                        fontWeight: "normal"
-                    }}
-                >
-                    <div><strong>Name:</strong> {data.label}</div>
-                    <div><strong>Description:</strong> {data.description || "No description"}</div>
-                    <div><strong>Power:</strong> {data.power ?? "?"}</div>
-                    <div><strong>Rarity:</strong> {data.rarity || "Unknown"}</div>
-                </div>
-            )}
+            {data.label}
         </div>
-    );
+
+        {/* Ảnh */}
+        <img
+            src={data.img || "/placeholder.svg?height=120&width=184"}
+            alt={data.label}
+            style={{
+                width: "calc(100% - 16px)",
+                height: 100,
+                objectFit: "cover",
+                // <CHANGE> Different border colors for selected state
+                border: selected ? "2px solid #F59E0B" : "2px solid #B91C1C",
+                borderTop: "none",
+                borderBottom: "none",
+                background: "linear-gradient(135deg, #F3F4F6, #E5E7EB)",
+                margin: "0 8px",
+            }}
+        />
+
+        {/* Nội dung */}
+        <div
+            style={{
+                flex: 1,
+                width: "calc(100% - 16px)",
+                margin: "0 8px 8px 8px",
+                // <CHANGE> Different content colors for selected state
+                background: selected ? "linear-gradient(135deg, #FEF3C7, #FDE68A)" : "linear-gradient(135deg, #FEE2E2, #FECACA)",
+                padding: "12px",
+                fontSize: 11,
+                fontWeight: "normal",
+                color: selected ? "#92400E" : "#1F2937",
+                textAlign: "left",
+                lineHeight: 1.4,
+                border: selected ? "2px solid #F59E0B" : "2px solid #B91C1C",
+                borderTop: "none",
+                borderRadius: "0 0 8px 8px",
+                position: "relative",
+            }}
+        >
+            <div style={{ fontWeight: "bold", color: selected ? "#D97706" : "#DC2626", marginBottom: 6, fontSize: 13 }}>
+                {data.title || data.label}
+            </div>
+            <div style={{ color: selected ? "#92400E" : "#374151", fontSize: 10, lineHeight: 1.3 }}>
+                {data.description || "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam ullamcorper eu ante a tempus."}
+            </div>
+        </div>
+
+        {/* Bottom right diamond */}
+        <div
+            style={{
+                position: "absolute",
+                bottom: 8,
+                right: 8,
+                width: 32,
+                height: 32,
+                // <CHANGE> Different colors for selected state
+                background: selected ? "linear-gradient(135deg, #FEF3C7, #FDE68A)" : "linear-gradient(135deg, #DC2626, #B91C1C)",
+                border: selected ? "2px solid #F59E0B" : "2px solid #7F1D1D",
+                transform: "rotate(45deg)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: selected ? "#92400E" : "#FEF3C7",
+                fontSize: 12,
+                fontWeight: "bold",
+                zIndex: 10,
+                boxShadow: selected ? "0 2px 6px rgba(245, 158, 11, 0.3)" : "0 2px 6px rgba(127, 29, 29, 0.3)",
+            }}
+        >
+            <span style={{ transform: "rotate(-45deg)" }}>--</span>
+        </div>
+
+        {/* Tooltip */}
+        {hovered && (
+            <div
+                className="card-tooltip-fadein"
+                style={{
+                    position: "absolute",
+                    top: -100,
+                    left: "100%",
+                    marginLeft: 12,
+                    background: "linear-gradient(135deg, #1F2937, #374151)",
+                    color: "#F9FAFB",
+                    padding: "12px 16px",
+                    borderRadius: 8,
+                    boxShadow: "0 8px 25px rgba(31, 41, 55, 0.4)",
+                    whiteSpace: "normal",
+                    zIndex: 100,
+                    pointerEvents: "none",
+                    minWidth: 180,
+                    fontWeight: "normal",
+                    fontSize: 12,
+                    lineHeight: 1.4,
+                    border: selected ? "2px solid #F59E0B" : "2px solid #DC2626",
+                }}
+            >
+                <div><strong style={{ color: "#FEF3C7" }}>Name:</strong> {data.label}</div>
+                <div><strong style={{ color: "#FEF3C7" }}>Description:</strong> {data.description || "No description"}</div>
+                <div><strong style={{ color: "#FEF3C7" }}>Power:</strong> {data.power ?? "?"}</div>
+                <div><strong style={{ color: "#FEF3C7" }}>Rarity:</strong> {data.rarity || "Unknown"}</div>
+            </div>
+        )}
+    </div>
+);
 }
 
 const nodeTypes = { cardNode: CardNode };
@@ -243,7 +365,7 @@ export default function Reviews() {
             style={{
                 width: "100vw",
                 height: "100vh",
-                backgroundImage: "url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1500&q=80')",
+                backgroundImage: `url(${BgImage})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 position: "relative",
