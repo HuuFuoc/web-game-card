@@ -1,240 +1,327 @@
-import React, { useState } from "react";
-import Tree from "react-d3-tree";
+import React, { useState, useCallback } from "react";
+import ReactFlow, {
+    Background,
+    Controls,
+    MiniMap,
+    useNodesState,
+    useEdgesState,
+    Handle,
+    Position,
+} from "reactflow";
+import "reactflow/dist/style.css";
 import "../Reviews.css";
+import Navbar from "../components/MyNavbar";
 
-const rawData = {
-  name: "Ông Tổ",
-  info: "Người khai sinh dòng họ",
-  children: [
+const cardImg = "https://upload.wikimedia.org/wikipedia/commons/3/3f/Placeholder_view_vector.svg";
+
+// Add more info to initial nodes
+const initialNodes = [
     {
-      name: "Con trai 1",
-      info: "Thông tin Con trai 1",
-      children: [
-        
-        {
-          name: "Cháu 1.2",
-          info: "Thông tin Cháu 1.2",
-          children: [
-            { name: "Chắt 1.2.1", info: "Thông tin Chắt 1.2.1" },
-            { name: "Chắt 1.2.2", info: "Thông tin Chắt 1.2.2" },
-            
-          ],
+        id: "1",
+        type: "cardNode",
+        position: { x: 100, y: 100 },
+        data: {
+            label: "A1",
+            img: cardImg,
+            description: "A1 is a legendary warrior card.",
+            power: 90,
+            rarity: "Legendary"
         },
-        {
-          name: "Cháu 1.3",
-          info: "Thông tin Cháu 1.3",
-          children: [
+    },
+    {
+        id: "2",
+        type: "cardNode",
+        position: { x: 400, y: 100 },
+        data: {
+            label: "A2",
+            img: cardImg,
+            description: "A2 is a defensive guardian card.",
+            power: 70,
+            rarity: "Epic"
+        },
+    },
+];
+
+const initialEdges = [];
+
+function CardNode({ data, selected }) {
+    const [hovered, setHovered] = useState(false);
+
+    return (
+        <div
+            style={{
+                width: 80,
+                height: 120,
+                background: selected ? "#ffe082" : "#222",
+                border: selected ? "3px solid #ffb300" : "2px solid #444",
+                borderRadius: 10,
+                boxShadow: "0 2px 8px #0008",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                fontWeight: "bold",
+                cursor: "pointer",
+                position: "relative",
+            }}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+        >
+            {/* Handles for React Flow edges */}
+            <Handle
+                type="target"
+                position={Position.Top}
+                style={{
+                    background: "#fff",
+                    width: 10,
+                    height: 10,
+                    borderRadius: "50%",
+                    top: -5,
+                    left: 35,
+                    border: "2px solid #3949ab",
+                }}
+            />
+            <Handle
+                type="source"
+                position={Position.Bottom}
+                style={{
+                    background: "#fff",
+                    width: 10,
+                    height: 10,
+                    borderRadius: "50%",
+                    bottom: -5,
+                    left: 35,
+                    border: "2px solid #ffb300",
+                }}
+            />
+            <img
+                src={data.img}
+                alt={data.label}
+                style={{
+                    width: 60,
+                    height: 60,
+                    borderRadius: 6,
+                    marginBottom: 8,
+                    background: "#fff",
+                }}
+            />
+            <div>{data.label}</div>
+            {hovered && (
+                <div
+                    className="card-tooltip-fadein"
+                    style={{
+                        position: "absolute",
+                        top: -100,
+                        left: "100%",
+                        marginLeft: 12,
+                        background: "#333",
+                        color: "#fff",
+                        padding: "10px 16px",
+                        borderRadius: 8,
+                        boxShadow: "0 2px 8px #0008",
+                        whiteSpace: "normal",
+                        zIndex: 100,
+                        pointerEvents: "none",
+                        minWidth: 180,
+                        fontWeight: "normal"
+                    }}
+                >
+                    <div><strong>Name:</strong> {data.label}</div>
+                    <div><strong>Description:</strong> {data.description || "No description"}</div>
+                    <div><strong>Power:</strong> {data.power ?? "?"}</div>
+                    <div><strong>Rarity:</strong> {data.rarity || "Unknown"}</div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+const nodeTypes = { cardNode: CardNode };
+
+export default function Reviews() {
+    const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+    const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+    const [selectedNodes, setSelectedNodes] = useState([]);
+    const [newCardLabel, setNewCardLabel] = useState("");
+
+    // Handle node selection (max 2 for merge)
+    const onNodeClick = useCallback((event, node) => {
+        setSelectedNodes((prev) => {
+            if (prev.includes(node.id)) {
+                return prev.filter((id) => id !== node.id);
+            }
+            if (prev.length < 2) {
+                return [...prev, node.id];
+            }
+            return prev;
+        });
+    }, []);
+
+    // Add a new card node
+    const handleAddCard = () => {
+        if (!newCardLabel.trim()) return;
+        const newId = (nodes.length + 1).toString();
+        // Calculate a new position for the added card to avoid overlapping
+        const newX = 50 + Math.random() * 500;
+        const newY = 50 + Math.random() * 300;
+        setNodes((nds) => [
+            ...nds,
             {
-              name: "Chắt 1.3.1",
-              info: "Thông tin Chắt 1.3.1",
-              children: [
-                { name: "Hậu duệ 1.3.1.1", info: "Thông tin Hậu duệ 1.3.1.1" },
-                { name: "Hậu duệ 1.3.1.2", info: "Thông tin Hậu duệ 1.3.1.2" },
-              ],
+                id: newId,
+                type: "cardNode",
+                position: { x: newX, y: newY },
+                data: {
+                    label: newCardLabel,
+                    img: cardImg,
+                    description: `${newCardLabel} is a newly created card.`,
+                    power: Math.floor(Math.random() * 100),
+                    rarity: "Common"
+                },
             },
-            { name: "Chắt 1.3.2", info: "Thông tin Chắt 1.3.2" },
-            
-          ],
-        },
-      ],
-    },
-    {
-      name: "Con trai 2",
-      info: "Thông tin Con trai 2",
-      children: [
-        
-        {
-          name: "Cháu 2.3",
-          info: "Thông tin Cháu 2.3",
-          children: [
-            { name: "Chắt 2.3.1", info: "Thông tin Chắt 2.3.1" },
-            { name: "Chắt 2.3.2", info: "Thông tin Chắt 2.3.2" },
-          ],
-        },
-        {
-          name: "Cháu 2.4",
-          info: "Thông tin Cháu 2.4",
-          children: [
-            { name: "Chắt 2.4.1", info: "Thông tin Chắt 2.4.1" },
-            { name: "Chắt 2.4.2", info: "Thông tin Chắt 2.4.2" },
-           
-          ],
-        },
-      ],
-    },
-  ],
-};
-
-// Collapse tất cả node từ đầu
-const collapseAll = (node) => {
-  if (node.children) {
-    node._children = node.children;
-    node._children.forEach(collapseAll);
-    node.children = null;
-  }
-};
-
-export default function FamilyTree() {
-  const [treeData, setTreeData] = useState(() => {
-    const clone = JSON.parse(JSON.stringify(rawData));
-    collapseAll(clone);
-    return [clone];
-  });
-
-  const [selectedNodeName, setSelectedNodeName] = useState(null); 
-  const [selectedNodeForAdd, setSelectedNodeForAdd] = useState(null); 
-  const [newNodeName, setNewNodeName] = useState("");
-
-  // Toggle expand/collapse
-  const handleToggle = (nodeName, node) => {
-    if (node.name === nodeName) {
-      if (node.children) {
-        node._children = node.children;
-        node.children = null;
-      } else if (node._children) {
-        node.children = node._children;
-        node._children = null;
-      }
-    } else {
-      if (node.children) node.children.forEach((c) => handleToggle(nodeName, c));
-      if (node._children) node._children.forEach((c) => handleToggle(nodeName, c));
-    }
-  };
-
-  // Khi click node
-  const onNodeClick = (nodeDatum) => {
-    const clone = JSON.parse(JSON.stringify(treeData[0]));
-    handleToggle(nodeDatum.name, clone);
-    setTreeData([clone]);
-
-    if (selectedNodeName === nodeDatum.name) {
-      setSelectedNodeName(null);
-    } else {
-      setSelectedNodeName(nodeDatum.name);
-    }
-
-    setSelectedNodeForAdd(nodeDatum.name);
-  };
-
-  // Hàm thêm node mới
-  const addChildNode = () => {
-    if (!selectedNodeForAdd || !newNodeName.trim()) return;
-
-    const clone = JSON.parse(JSON.stringify(treeData[0]));
-
-    const dfs = (node) => {
-      if (node.name === selectedNodeForAdd) {
-        if (!node.children) node.children = [];
-        node.children.push({ name: newNodeName, info: `Thông tin ${newNodeName}` });
-      } else {
-        if (node.children) node.children.forEach(dfs);
-        if (node._children) node._children.forEach(dfs);
-      }
+        ]);
+        setNewCardLabel("");
     };
 
-    dfs(clone);
-    setTreeData([clone]);
-    setNewNodeName("");
-  };
+    // Merge two selected nodes into a new node, position it between them
+    const handleMergeCard = () => {
+        if (selectedNodes.length !== 2 || !newCardLabel.trim()) return;
 
-  return (
-    <div className="review-container">
-      <h2 className="review-title">CÂY GIA PHẢ</h2>
+        // Find the two selected nodes
+        const nodeA = nodes.find((n) => n.id === selectedNodes[0]);
+        const nodeB = nodes.find((n) => n.id === selectedNodes[1]);
 
-      {/* Form thêm node */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          marginBottom: "20px",
-          gap: "10px",
-        }}
-      >
-        <input
-          type="text"
-          placeholder="Tên node mới"
-          value={newNodeName}
-          onChange={(e) => setNewNodeName(e.target.value)}
-          disabled={!selectedNodeForAdd}
-          style={{ color: "black" }} // chữ trong ô nhập màu đen
-        />
-        <button onClick={addChildNode} disabled={!selectedNodeForAdd}>
-          {selectedNodeForAdd
-            ? `Thêm con vào ${selectedNodeForAdd}`
-            : "Chưa chọn node"}
-        </button>
-      </div>
+        // Calculate the midpoint for the new node
+        const newX = (nodeA.position.x + nodeB.position.x) / 2;
+        const newY = Math.max(nodeA.position.y, nodeB.position.y) + 150;
 
-      <div style={{ display: "flex", height: "100%" }}>
-        <div className="tree-wrapper" style={{ flex: 1 }}>
-          <Tree
-            data={treeData}
-            orientation="vertical"
-            translate={{ x: 600, y: 80 }}
-            nodeSize={{ x: 250, y: 150 }}
-            collapsible={false}
-            renderCustomNodeElement={({ nodeDatum }) => {
-              const hasChildren = nodeDatum.children || nodeDatum._children;
-              const isCollapsed = !!nodeDatum._children;
-              const isSelected = nodeDatum.name === selectedNodeName;
+        const newId = (nodes.length + 1).toString();
+        setNodes((nds) => [
+            ...nds,
+            {
+                id: newId,
+                type: "cardNode",
+                position: { x: newX, y: newY },
+                data: {
+                    label: newCardLabel,
+                    img: cardImg,
+                    description: `Merged from ${nodeA.data.label} and ${nodeB.data.label}.`,
+                    power: Math.floor(((nodeA.data.power ?? 50) + (nodeB.data.power ?? 50)) / 2),
+                    rarity: "Fusion"
+                },
+            },
+        ]);
+        setEdges((eds) => [
+            ...eds,
+            {
+                id: `e${selectedNodes[0]}-${newId}`,
+                source: selectedNodes[0],
+                target: newId,
+                type: "step",
+                style: { stroke: "#fff", strokeWidth: 3 },
+            },
+            {
+                id: `e${selectedNodes[1]}-${newId}`,
+                source: selectedNodes[1],
+                target: newId,
+                type: "step",
+                style: { stroke: "#fff", strokeWidth: 3 },
+            },
+        ]);
+        setSelectedNodes([]);
+        setNewCardLabel(""); // Clear input after merge
+    };
 
-              return (
-                <g
-                  onClick={() => onNodeClick(nodeDatum)}
-                  style={{ cursor: "pointer" }}
-                >
-                  <circle
-                    r={28}
-                    fill="lightblue"
-                    stroke="steelblue"
-                    strokeWidth="2"
-                  />
-                  <text
-                    fill="black"
-                    x="35"
-                    dy="5"
-                    fontSize="16px"
-                    fontWeight="700"
-                  >
-                    {nodeDatum.name}
-                  </text>
-                  {hasChildren && (
-                    <text
-                      x="0"
-                      y="-35"
-                      textAnchor="middle"
-                      style={{ fontSize: "20px", fontWeight: "bold" }}
-                    >
-                      {isCollapsed ? "+" : "−"}
-                    </text>
-                  )}
+    // Highlight selected nodes
+    const customNodes = nodes.map((node) => ({
+        ...node,
+        selected: selectedNodes.includes(node.id),
+    }));
 
-                  {/* Khung thông tin nhỏ bên cạnh node */}
-                  {isSelected && nodeDatum.info && (
-                    <g transform="translate(50, -10)">
-                      <rect
-                        x={0}
-                        y={0}
-                        width={160}
-                        height={50}
-                        fill="rgba(240,240,240,1)" // nền xám nhạt
-                        stroke="black"
-                        strokeWidth="1"
-                        rx={8}
-                        ry={8}
-                      />
-                      <text x={10} y={30} fill="black" fontSize="12px">
-                        {nodeDatum.info}
-                      </text>
-                    </g>
-                  )}
-                </g>
-              );
+    return (
+        <div
+            style={{
+                width: "100vw",
+                height: "100vh",
+                backgroundImage: "url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1500&q=80')",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                position: "relative",
+                paddingTop: 64, // Prevents content from hiding under the fixed navbar
             }}
-          />
+        >
+            <Navbar />
+            {/* Top bar */}
+            <div
+                style={{
+                    position: "absolute",
+                    top: 90,
+                    left: 40,
+                    zIndex: 10,
+                    display: "flex",
+                    gap: 12,
+                }}
+            >
+                <input
+                    type="text"
+                    placeholder="Tên Card mới"
+                    value={newCardLabel}
+                    onChange={(e) => setNewCardLabel(e.target.value)}
+                    style={{
+                        padding: "6px 10px",
+                        borderRadius: 6,
+                        border: "1px solid #888",
+                        fontSize: 16,
+                        marginRight: 8,
+                        color: "black",
+                    }}
+                />
+                <button
+                    onClick={handleAddCard}
+                    style={{
+                        background: "#3949ab",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: 6,
+                        padding: "8px 16px",
+                        fontWeight: "bold",
+                        fontSize: 16,
+                        cursor: "pointer",
+                    }}
+                >
+                    + Thêm Card
+                </button>
+                <button
+                    onClick={handleMergeCard}
+                    disabled={selectedNodes.length !== 2 || !newCardLabel.trim()}
+                    style={{
+                        background: selectedNodes.length === 2 && newCardLabel.trim() ? "#ffb300" : "#aaa",
+                        color: "#222",
+                        border: "none",
+                        borderRadius: 6,
+                        padding: "8px 16px",
+                        fontWeight: "bold",
+                        fontSize: 16,
+                        cursor: selectedNodes.length === 2 && newCardLabel.trim() ? "pointer" : "not-allowed",
+                    }}
+                >
+                    Ghép Card
+                </button>
+            </div>
+            <ReactFlow
+                nodes={customNodes}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onNodeClick={onNodeClick}
+                nodeTypes={nodeTypes}
+                fitView
+                style={{ width: "100vw", height: "100vh" }}
+            >
+                <Background color="#aaa" gap={32} />
+                <MiniMap />
+                <Controls />
+            </ReactFlow>
         </div>
-      </div>
-    </div>
-  );
+    );
 }
