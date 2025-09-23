@@ -56,15 +56,10 @@ const Login = () => {
                         </form>
 
                         <div className="text-center mt-4 text-gray-400">
-                            <Link to="/forgot-password" className="text-pink-400 underline hover:text-pink-500 mb-2">
-                                Forgot Password?
-                           </Link>
-                             <span className="text-gray-400">
-                                Don’t have an account?{" "}
-                                <Link to="/register" className="text-pink-400 underline hover:text-pink-500">
-                                    Register
-                                </Link>
-                            </span>
+                            Don’t have an account?{" "}
+                            <Link to="/register" className="text-pink-400 underline hover:text-pink-500">
+                                Register
+                            </Link>
                         </div>
                     </div>
                 </div>

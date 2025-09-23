@@ -4,10 +4,24 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + Reacts</title>
+    <title>Vite + React</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- SVG Gradients for tree visualization -->
+    <svg width="0" height="0">
+      <defs>
+        <linearGradient id="nodeGradient" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#7b2ff7" />
+          <stop offset="100%" stop-color="#f107a3" />
+        </linearGradient>
+        <linearGradient id="nodeGradientHover" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#f107a3" />
+          <stop offset="100%" stop-color="#7b2ff7" />
+        </linearGradient>
+      </defs>
+    </svg>
   </body>
 </html>
