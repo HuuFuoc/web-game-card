@@ -1,255 +1,240 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useState } from "react";
 import Tree from "react-d3-tree";
-import "../css/Reviews.css";
+import "../Reviews.css";
 
-/* Dữ liệu ví dụ (có thể lấy từ BE) */
-const familyData = {
+const rawData = {
   name: "Ông Tổ",
-  avatar: "/ongto.png",
+  info: "Người khai sinh dòng họ",
   children: [
     {
-      name: "Nhánh A",
+      name: "Con trai 1",
+      info: "Thông tin Con trai 1",
       children: [
+        
         {
-          name: "Con A1",
+          name: "Cháu 1.2",
+          info: "Thông tin Cháu 1.2",
           children: [
-            { name: "Cháu A1-1" },
-            { name: "Cháu A1-2" },
-            {
-              name: "Cháu A1-3",
-              children: [
-                { name: "Chắt A1-3-1" },
-                { name: "Chắt A1-3-2" },
-                { name: "Chắt A1-3-3" },
-              ],
-            },
+            { name: "Chắt 1.2.1", info: "Thông tin Chắt 1.2.1" },
+            { name: "Chắt 1.2.2", info: "Thông tin Chắt 1.2.2" },
+            
           ],
         },
         {
-          name: "Con A2",
+          name: "Cháu 1.3",
+          info: "Thông tin Cháu 1.3",
           children: [
-            { name: "Cháu A2-1" },
-            { name: "Cháu A2-2" },
+            {
+              name: "Chắt 1.3.1",
+              info: "Thông tin Chắt 1.3.1",
+              children: [
+                { name: "Hậu duệ 1.3.1.1", info: "Thông tin Hậu duệ 1.3.1.1" },
+                { name: "Hậu duệ 1.3.1.2", info: "Thông tin Hậu duệ 1.3.1.2" },
+              ],
+            },
+            { name: "Chắt 1.3.2", info: "Thông tin Chắt 1.3.2" },
+            
           ],
         },
       ],
     },
     {
-      name: "Nhánh B",
+      name: "Con trai 2",
+      info: "Thông tin Con trai 2",
       children: [
+        
         {
-          name: "Con B1",
-          children: [{ name: "Cháu B1-1" }, { name: "Cháu B1-2" }],
+          name: "Cháu 2.3",
+          info: "Thông tin Cháu 2.3",
+          children: [
+            { name: "Chắt 2.3.1", info: "Thông tin Chắt 2.3.1" },
+            { name: "Chắt 2.3.2", info: "Thông tin Chắt 2.3.2" },
+          ],
         },
         {
-          name: "Con B2",
-          children: [{ name: "Cháu B2-1" }, { name: "Cháu B2-2" }],
+          name: "Cháu 2.4",
+          info: "Thông tin Cháu 2.4",
+          children: [
+            { name: "Chắt 2.4.1", info: "Thông tin Chắt 2.4.1" },
+            { name: "Chắt 2.4.2", info: "Thông tin Chắt 2.4.2" },
+           
+          ],
         },
       ],
     },
   ],
 };
-export default function Reviews() {
-  const wrapperRef = useRef(null);
-  const treeRef = useRef(null);
-  const [size, setSize] = useState({ width: 800, height: 600 });
-  const [selectedNode, setSelectedNode] = useState(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  const [zoomedNode, setZoomedNode] = useState(null);
 
-  useEffect(() => {
-    const el = wrapperRef.current;
-    if (!el) return;
-    const setElSize = (rect) => {
-      setSize({
-        width: Math.max(300, Math.floor(rect.width)),
-        height: Math.max(300, Math.floor(rect.height)),
-      });
-    };
-    setElSize(el.getBoundingClientRect());
-    let ro = null;
-    if (typeof ResizeObserver !== "undefined") {
-      ro = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          setElSize(entry.contentRect);
-        }
-      });
-      ro.observe(el);
-    } else {
-      const onResize = () => setElSize(el.getBoundingClientRect());
-      window.addEventListener("resize", onResize);
-      return () => window.removeEventListener("resize", onResize);
-    }
-    return () => {
-      if (ro) ro.disconnect();
-    };
-  }, []);
-
-  const isValidSize = Number.isFinite(size.width) && Number.isFinite(size.height) && size.width > 0 && size.height > 0;
-  const translate = isValidSize ? { x: Math.round(size.width / 2), y: 100 } : { x: 400, y: 100 };
-
-  // Xử lý click node: hiện popup gần vị trí click
-  const handleNodeClick = (nodeDatum, event) => {
-    const rect = wrapperRef.current?.getBoundingClientRect();
-    if (rect && event) {
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-
-      // Tính vị trí popup tránh tràn màn hình
-      const tooltipWidth = 300;
-      const tooltipHeight = 200;
-      let tooltipX = x + 20;
-      let tooltipY = y - 100;
-
-      if (tooltipX + tooltipWidth > size.width) {
-        tooltipX = x - tooltipWidth - 20;
-      }
-      if (tooltipY < 0) {
-        tooltipY = y + 20;
-      }
-      if (tooltipY + tooltipHeight > size.height) {
-        tooltipY = size.height - tooltipHeight - 20;
-      }
-
-      setTooltipPosition({ x: tooltipX, y: tooltipY });
-    }
-
-    setSelectedNode(nodeDatum);
-    setZoomedNode(nodeDatum.name);
-    setTimeout(() => setZoomedNode(null), 200);
-  };
-
-  // Custom node: click để hiện popup
-  const renderCustomNode = ({ nodeDatum }) => {
-    const isZoomed = zoomedNode === nodeDatum.name;
-     const isEmpty = !nodeDatum.avatar;
-    return (
-      <g
-        onClick={(event) => handleNodeClick(nodeDatum, event.nativeEvent)}
-        style={{ cursor: "pointer" }}
-        transform={isZoomed ? "scale(1.1)" : "scale(1)"}
-        className="transition-transform duration-200 ease-out"
-      >
-        {isEmpty ? (
-        <>
-          <circle r={35} fill="#222" stroke="#fff" strokeWidth={3} />
-          <text
-            x={0}
-            y={8}
-            textAnchor="middle"
-            fontSize={32}
-            fontWeight="bold"
-            fill="#fff"
-            style={{ pointerEvents: "none" }}
-          >
-            ?
-          </text>
-        </>
-      ) : (
-        <image
-          href={nodeDatum.avatar}
-          x={-35}
-          y={-35}
-          width={70}
-          height={70}
-          clipPath="circle(35px at 35px 35px)"
-        />
-      )}
-      
-         <text x={0} y={55} textAnchor="middle" fontSize={14} fontWeight="600" fill="#fff">
-        {nodeDatum.name}
-      </text>
-      {nodeDatum.birthYear && (
-        <text x={0} y={70} textAnchor="middle" fontSize={10} fill="#fff">
-          {nodeDatum.birthYear}
-        </text>
-      )}
-    </g>
-  );
+// Collapse tất cả node từ đầu
+const collapseAll = (node) => {
+  if (node.children) {
+    node._children = node.children;
+    node._children.forEach(collapseAll);
+    node.children = null;
+  }
 };
 
+export default function FamilyTree() {
+  const [treeData, setTreeData] = useState(() => {
+    const clone = JSON.parse(JSON.stringify(rawData));
+    collapseAll(clone);
+    return [clone];
+  });
+
+  const [selectedNodeName, setSelectedNodeName] = useState(null); 
+  const [selectedNodeForAdd, setSelectedNodeForAdd] = useState(null); 
+  const [newNodeName, setNewNodeName] = useState("");
+
+  // Toggle expand/collapse
+  const handleToggle = (nodeName, node) => {
+    if (node.name === nodeName) {
+      if (node.children) {
+        node._children = node.children;
+        node.children = null;
+      } else if (node._children) {
+        node.children = node._children;
+        node._children = null;
+      }
+    } else {
+      if (node.children) node.children.forEach((c) => handleToggle(nodeName, c));
+      if (node._children) node._children.forEach((c) => handleToggle(nodeName, c));
+    }
+  };
+
+  // Khi click node
+  const onNodeClick = (nodeDatum) => {
+    const clone = JSON.parse(JSON.stringify(treeData[0]));
+    handleToggle(nodeDatum.name, clone);
+    setTreeData([clone]);
+
+    if (selectedNodeName === nodeDatum.name) {
+      setSelectedNodeName(null);
+    } else {
+      setSelectedNodeName(nodeDatum.name);
+    }
+
+    setSelectedNodeForAdd(nodeDatum.name);
+  };
+
+  // Hàm thêm node mới
+  const addChildNode = () => {
+    if (!selectedNodeForAdd || !newNodeName.trim()) return;
+
+    const clone = JSON.parse(JSON.stringify(treeData[0]));
+
+    const dfs = (node) => {
+      if (node.name === selectedNodeForAdd) {
+        if (!node.children) node.children = [];
+        node.children.push({ name: newNodeName, info: `Thông tin ${newNodeName}` });
+      } else {
+        if (node.children) node.children.forEach(dfs);
+        if (node._children) node._children.forEach(dfs);
+      }
+    };
+
+    dfs(clone);
+    setTreeData([clone]);
+    setNewNodeName("");
+  };
+
   return (
-    <div className="review-container" style={{ position: "relative", minHeight: "100vh", background: "" }}>
-      <h2 className="review-title" style={{ textAlign: "center", color: "#fff", paddingTop: 32, fontSize: 32 }}>Cây gia phả</h2>
-      <div ref={wrapperRef} className="tree-wrapper" style={{ width: "100%", height: "80vh" }}>
-        {isValidSize && (
-          <Tree
-            ref={treeRef}
-            data={familyData}
-            orientation="vertical"
-            translate={translate}
-            svgProps={{
-              width: size.width,
-              height: size.height,
-              style: { width: "100%", height: "100%" },
-            }}
-            zoomable={true}
-            scaleExtent={[0.1, 2]}
-            nodeSize={{ x: 220, y: 180 }}
-            separation={{ siblings: 1, nonSiblings: 1.4 }}
-            renderCustomNodeElement={renderCustomNode}
-          />
-        )}
+    <div className="review-container">
+      <h2 className="review-title">CÂY GIA PHẢ</h2>
+
+      {/* Form thêm node */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          marginBottom: "20px",
+          gap: "10px",
+        }}
+      >
+        <input
+          type="text"
+          placeholder="Tên node mới"
+          value={newNodeName}
+          onChange={(e) => setNewNodeName(e.target.value)}
+          disabled={!selectedNodeForAdd}
+          style={{ color: "black" }} // chữ trong ô nhập màu đen
+        />
+        <button onClick={addChildNode} disabled={!selectedNodeForAdd}>
+          {selectedNodeForAdd
+            ? `Thêm con vào ${selectedNodeForAdd}`
+            : "Chưa chọn node"}
+        </button>
       </div>
-      {/* Popup thông tin node */}
-      {selectedNode && (
-        <div
-          className="node-info-card fade-in-card"
-          style={{
-            position: "absolute",
-            left: tooltipPosition.x,
-            top: tooltipPosition.y,
-            background: "#fff",
-            borderRadius: 12,
-            boxShadow: "0 4px 24px #0004",
-            padding: 20,
-            minWidth: 220,
-            maxWidth: 300,
-            zIndex: 100,
-            // animation: "fade-in 0.2s",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-            <img
-              src={selectedNode.avatar || "/placeholder.svg"}
-              alt={selectedNode.name}
-              style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid #8B5CF6" }}
-            />
-            <div>
-              <h3 style={{ margin: 0, fontWeight: 600, fontSize: 18 }}>{selectedNode.name || "Chưa có tên"}</h3>
-              {selectedNode.birthYear && <div style={{ fontSize: 12, color: "#666" }}>Sinh: {selectedNode.birthYear}</div>}
-            </div>
-          </div>
-          {selectedNode.desc && <p style={{ fontSize: 14, color: "#444", marginBottom: 8 }}>{selectedNode.desc}</p>}
-          {selectedNode.occupation && (
-            <div style={{ fontSize: 13, color: "#555", marginBottom: 4 }}>
-              <b>Nghề nghiệp:</b> {selectedNode.occupation}
-            </div>
-          )}
-          {selectedNode.deathYear && (
-            <div style={{ fontSize: 13, color: "#555", marginBottom: 4 }}>
-              <b>Mất:</b> {selectedNode.deathYear}
-            </div>
-          )}
-          <button
-            onClick={() => setSelectedNode(null)}
-            style={{
-              marginTop: 12,
-              width: "100%",
-              background: "#8B5CF6",
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              padding: "8px 0",
-              cursor: "pointer",
-              fontWeight: 500,
-              fontSize: 14,
+
+      <div style={{ display: "flex", height: "100%" }}>
+        <div className="tree-wrapper" style={{ flex: 1 }}>
+          <Tree
+            data={treeData}
+            orientation="vertical"
+            translate={{ x: 600, y: 80 }}
+            nodeSize={{ x: 250, y: 150 }}
+            collapsible={false}
+            renderCustomNodeElement={({ nodeDatum }) => {
+              const hasChildren = nodeDatum.children || nodeDatum._children;
+              const isCollapsed = !!nodeDatum._children;
+              const isSelected = nodeDatum.name === selectedNodeName;
+
+              return (
+                <g
+                  onClick={() => onNodeClick(nodeDatum)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <circle
+                    r={28}
+                    fill="lightblue"
+                    stroke="steelblue"
+                    strokeWidth="2"
+                  />
+                  <text
+                    fill="black"
+                    x="35"
+                    dy="5"
+                    fontSize="16px"
+                    fontWeight="700"
+                  >
+                    {nodeDatum.name}
+                  </text>
+                  {hasChildren && (
+                    <text
+                      x="0"
+                      y="-35"
+                      textAnchor="middle"
+                      style={{ fontSize: "20px", fontWeight: "bold" }}
+                    >
+                      {isCollapsed ? "+" : "−"}
+                    </text>
+                  )}
+
+                  {/* Khung thông tin nhỏ bên cạnh node */}
+                  {isSelected && nodeDatum.info && (
+                    <g transform="translate(50, -10)">
+                      <rect
+                        x={0}
+                        y={0}
+                        width={160}
+                        height={50}
+                        fill="rgba(240,240,240,1)" // nền xám nhạt
+                        stroke="black"
+                        strokeWidth="1"
+                        rx={8}
+                        ry={8}
+                      />
+                      <text x={10} y={30} fill="black" fontSize="12px">
+                        {nodeDatum.info}
+                      </text>
+                    </g>
+                  )}
+                </g>
+              );
             }}
-          >
-            Đóng
-          </button>
+          />
         </div>
-      )}
+      </div>
     </div>
   );
 }
