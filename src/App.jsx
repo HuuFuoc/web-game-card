@@ -5,7 +5,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import Reviews from "./pages/Reviews";
-import News from "./pages/News";
+import Shop from "./pages/Shop";
 import Contact from "./pages/Contact";
 
 function App() {
@@ -18,7 +18,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reviews" element={<Reviews />} />
-          <Route path="/news" element={<News />} />
+          <Route path="/shop" element={<Shop />} />
           <Route path="/contact" element={<Contact />} />
         </Routes>
       </BrowserRouter>
