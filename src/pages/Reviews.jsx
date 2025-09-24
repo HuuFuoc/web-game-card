@@ -37,33 +37,54 @@ export default function Reviews() {
 
     return (
       <div
-        style={{
-          width: CARD_W,
-          height: CARD_H,
-          background: isSelected
-            ? "linear-gradient(135deg, #DC2626, #B91C1C)"
-            : "linear-gradient(135deg, #FCA5A5, #F87171)",
-          border: isSelected ? "4px solid #7F1D1D" : "4px solid #B91C1C",
-          borderRadius: 12,
-          boxShadow: isSelected
-            ? "0 12px 30px rgba(127, 29, 29, 0.6), 0 0 0 2px #FEF3C7"
-            : "0 8px 20px rgba(185, 28, 28, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "flex-start",
-          color: "#1F2937",
-          fontWeight: "bold",
-          cursor: "pointer",
-          position: "relative",
-          overflow: "hidden",
-          fontFamily: "serif",
-          transform: isSelected ? "scale(1.05)" : "scale(1)",
-          transition: "all 0.3s ease",
-        }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
+            style={{
+                width: CARD_W,
+                height: CARD_H,
+                background: isSelected
+                    ? "linear-gradient(135deg, #DC2626, #B91C1C)"
+                    : "linear-gradient(135deg, #FCA5A5, #F87171)",
+                border: isSelected ? "4px solid #7F1D1D" : "4px solid #B91C1C",
+                borderRadius: 12,
+                boxShadow: isSelected
+                    ? "0 12px 30px rgba(127, 29, 29, 0.6), 0 0 0 2px #FEF3C7"
+                    : "0 8px 20px rgba(185, 28, 28, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                color: "#1F2937",
+                fontWeight: "bold",
+                cursor: "pointer",
+                position: "relative",
+                overflow: "visible", // <-- change from "hidden" to "visible"
+                fontFamily: "serif",
+                transform: isSelected ? "scale(1.05)" : "scale(1)",
+                transition: "all 0.3s ease",
+                paddingTop: 24, // <-- add this line
+            }}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+        >
+            {data.isFusion && (
+                <svg
+                    width="32"
+                    height="24"
+                    style={{
+                        position: "absolute",
+                        top: -24, // <-- change from -24 to 0
+                        left: "50%",
+                        transform: "translateX(-50%) rotate(180deg)" ,
+                        zIndex: 30,
+                        pointerEvents: "none",
+                    }}
+                    viewBox="0 0 32 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                >
+                    <polygon points="16,0 32,20 0,20" fill="#111" />
+                    <rect x="12" y="20" width="8" height="4" fill="#111" />
+                </svg>
+            )}
         {/* Top connection node */}
         <div
           style={{
@@ -173,6 +194,7 @@ export default function Reviews() {
             borderBottom: "none",
             background: "linear-gradient(135deg, #F3F4F6, #E5E7EB)",
             margin: "0 8px",
+            pointerEvents: "none",
           }}
         />
 
@@ -272,11 +294,11 @@ export default function Reviews() {
     )
   }
 
-  const isValidCardName = (name) => {
-    if (!name) return false
-    const regex = /^thẻ\s+\d+\/?\d*$/i
-    return regex.test(name.trim())
-  }
+  //const isValidCardName = (name) => {
+  //  if (!name) return false
+  //  const regex = /^thẻ\s+\d+\/?\d*$/i
+  //  return regex.test(name.trim())
+  //}
 
   const handleDragStartFromList = (e, card) => {
     e.dataTransfer.setData("card", JSON.stringify(card))
@@ -367,56 +389,67 @@ export default function Reviews() {
     )
   }
 
-  const handleMerge = () => {
-    if (selected.length !== 2) return alert("Chọn đúng 2 thẻ để ghép")
-    const name = prompt("Nhập tên thẻ mới (vd: Thẻ 11):")
-    if (!name || !isValidCardName(name)) return alert("Tên không hợp lệ")
+    const handleMerge = () => {
+        if (selected.length !== 2) return alert("Chọn đúng 2 thẻ để ghép")
+        const name = prompt("Nhập tên thẻ mới (vd: Thẻ 11):")
+        if (!name) return alert("Tên không hợp lệ")
+        if (cards.some((c) => c.id.toLowerCase() === name.trim().toLowerCase())) {
+            return alert("Tên thẻ đã tồn tại trong danh sách")
+        }
 
-    if (cards.some((c) => c.id.toLowerCase() === name.trim().toLowerCase())) {
-      return alert("Tên thẻ đã tồn tại trong danh sách")
+        const selectedCards = canvasCards.filter((c) => selected.includes(c.uniqueKey))
+        const avgPower = Math.floor(selectedCards.reduce((sum, c) => sum + (c.power || 50), 0) / selectedCards.length)
+
+        const ukey = `new-${uniqueCounter}`
+        setUniqueCounter((c) => c + 1)
+
+        // Find the last fusion card
+        const fusionCards = canvasCards.filter(c => c.isFusion)
+        let mapX, mapY
+        if (fusionCards.length > 0) {
+            // Place to the right of the last fusion card
+            const lastFusion = fusionCards[fusionCards.length - 1]
+            mapX = lastFusion.x + CARD_W + 32 // 32px gap
+            mapY = lastFusion.y
+        } else {
+            // First fusion card: center
+            const rect = containerRef.current.getBoundingClientRect()
+            mapX = (rect.width / 2 - pan.x) / zoom - CARD_W / 2
+            mapY = (rect.height / 2 - pan.y) / zoom - CARD_H / 2
+        }
+
+        const newCard = {
+            id: name.trim(),
+            uniqueKey: ukey,
+            x: mapX,
+            y: mapY,
+            img: cardImg,
+            description: `Ghép từ ${selectedCards.map((c) => c.id).join(" và ")}.`,
+            power: avgPower,
+            rarity: "Fusion",
+            isFusion: true,
+        }
+
+        setCanvasCards((prev) => [...prev, newCard])
+        setCards((prev) => [
+            ...prev,
+            {
+                id: newCard.id,
+                img: cardImg,
+                description: newCard.description,
+                power: newCard.power,
+                rarity: newCard.rarity,
+            },
+        ])
+
+        setRelations((prev) => [
+            ...prev,
+            { fromKey: selected[0], toKey: newCard.uniqueKey },
+            { fromKey: selected[1], toKey: newCard.uniqueKey },
+        ])
+
+        setSelected([])
     }
-
-    const selectedCards = canvasCards.filter((c) => selected.includes(c.uniqueKey))
-    const avgPower = Math.floor(selectedCards.reduce((sum, c) => sum + (c.power || 50), 0) / selectedCards.length)
-
-    const ukey = `new-${uniqueCounter}`
-    setUniqueCounter((c) => c + 1)
-
-    const rect = containerRef.current.getBoundingClientRect()
-    const mapX = (rect.width / 2 - pan.x) / zoom - CARD_W / 2
-    const mapY = (rect.height / 2 - pan.y) / zoom - CARD_H / 2
-
-    const newCard = {
-      id: name.trim(),
-      uniqueKey: ukey,
-      x: mapX,
-      y: mapY,
-      img: cardImg,
-      description: `Ghép từ ${selectedCards.map((c) => c.id).join(" và ")}.`,
-      power: avgPower,
-      rarity: "Fusion",
-    }
-
-    setCanvasCards((prev) => [...prev, newCard])
-    setCards((prev) => [
-      ...prev,
-      {
-        id: newCard.id,
-        img: cardImg,
-        description: newCard.description,
-        power: newCard.power,
-        rarity: newCard.rarity,
-      },
-    ])
-
-    setRelations((prev) => [
-      ...prev,
-      { fromKey: selected[0], toKey: newCard.uniqueKey },
-      { fromKey: selected[1], toKey: newCard.uniqueKey },
-    ])
-
-    setSelected([])
-  }
 
   const handleDelete = () => {
     if (selected.length < 1) return alert("Chọn ít nhất 1 thẻ để xóa")
@@ -431,24 +464,28 @@ export default function Reviews() {
     const instance = canvasCards.find((c) => c.uniqueKey === uniqueKey)
     if (!instance) return
 
-    const oldId = instance.id
-    const name = prompt("Nhập tên mới (vd: Thẻ 12):")
-    if (!name || !isValidCardName(name)) return alert("Tên không hợp lệ")
-    if (cards.some((c) => c.id.toLowerCase() === name.trim().toLowerCase())) {
-      return alert("Tên thẻ đã tồn tại trong danh sách")
-    }
+      const oldId = instance.id
+      const name = prompt("Nhập tên mới (vd: Thẻ 12):")
+      // Removed name validation
+      // if (!name || !isValidCardName(name)) return alert("Tên không hợp lệ")
+      if (!name) return alert("Tên không hợp lệ")
+      if (cards.some((c) => c.id.toLowerCase() === name.trim().toLowerCase())) {
+          return alert("Tên thẻ đã tồn tại trong danh sách")
+      }
 
     setCanvasCards((prev) => prev.map((c) => (c.id === oldId ? { ...c, id: name.trim() } : c)))
     setCards((prev) => prev.map((c) => (c.id === oldId ? { ...c, id: name.trim() } : c)))
     setSelected([])
   }
 
-  const handleAddCard = () => {
-    const name = prompt("Nhập tên thẻ mới (vd: Thẻ 20):")
-    if (!name || !isValidCardName(name)) return alert("Tên không hợp lệ")
-    if (cards.some((c) => c.id.toLowerCase() === name.trim().toLowerCase())) {
-      return alert("Tên thẻ đã tồn tại trong danh sách")
-    }
+    const handleAddCard = () => {
+        const name = prompt("Nhập tên thẻ mới (vd: Thẻ 20):")
+        // Removed name validation
+        // if (!name || !isValidCardName(name)) return alert("Tên không hợp lệ")
+        if (!name) return alert("Tên không hợp lệ")
+        if (cards.some((c) => c.id.toLowerCase() === name.trim().toLowerCase())) {
+            return alert("Tên thẻ đã tồn tại trong danh sách")
+        }
     setCards((prev) => [
       ...prev,
       {
@@ -518,13 +555,55 @@ export default function Reviews() {
     }
   }
 
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") setSelected([])
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [])
+    useEffect(() => {
+        // Keyboard shortcuts and block browser zoom
+        const onKey = (e) => {
+            if (e.key === "Escape") setSelected([])
+
+            // Block browser zoom: Ctrl + "+" or Ctrl + "-" or Ctrl + "="
+            if (
+                (e.ctrlKey || e.metaKey) &&
+                (e.key === "+" || e.key === "-" || e.key === "=")
+            ) {
+                e.preventDefault()
+            }
+        }
+        window.addEventListener("keydown", onKey, { passive: false })
+
+        // Mouse wheel zoom for map container
+        const container = containerRef.current
+        if (container) {
+            const handleWheel = (e) => {
+                // Only zoom if Ctrl is NOT pressed (avoid browser zoom)
+                if (e.ctrlKey) return
+                e.preventDefault()
+                const delta = e.deltaY
+                let newZoom = zoom
+
+                if (delta < 0) {
+                    newZoom = Math.min(2, zoom + 0.08)
+                } else if (delta > 0) {
+                    newZoom = Math.max(0.4, zoom - 0.08)
+                }
+
+                if (newZoom !== zoom) {
+                    handleZoomChange(newZoom)
+                }
+            }
+            container.addEventListener("wheel", handleWheel, { passive: false })
+
+            // Cleanup wheel event
+            return () => {
+                window.removeEventListener("keydown", onKey)
+                container.removeEventListener("wheel", handleWheel)
+            }
+        }
+
+        // Cleanup keyboard event if container is not mounted
+        return () => {
+            window.removeEventListener("keydown", onKey)
+        }
+    }, [zoom, pan])
 
   const getParents = (uniqueKey) => {
     const rels = relations.filter((r) => r.toKey === uniqueKey)
@@ -537,14 +616,14 @@ export default function Reviews() {
   return (
     <div className="bg-gray-900 min-h-screen flex flex-col text-white">
       <Navbar />
-      <div className="flex flex-1 overflow-hidden">
+          <div className="flex flex-1 overflow-hidden mt-20">
         {/* Left List */}
-        <div className="w-56 bg-gray-800 p-3 flex flex-col">
+              <div className="w-56 bg-gray-800 p-3 flex flex-col h-[calc(100vh-80px)]">
           <h3 className="mb-2 font-bold">Danh sách thẻ</h3>
           <div
             className="flex-1 overflow-y-auto pr-2"
             style={{
-              maxHeight: "calc(100vh - 200px)",
+              maxHeight: "calc(100vh - 80px)",
               scrollbarWidth: "thin",
               scrollbarColor: "#4B5563 #374151",
             }}
@@ -599,66 +678,105 @@ export default function Reviews() {
           onDrop={handleDropToCanvas}
           onMouseDown={handleCanvasMouseDown}
         >
-          <svg className="absolute left-0 top-0 w-full h-full pointer-events-none">
-            {relations.map((r, i) => {
-              const from = canvasCards.find((c) => c.uniqueKey === r.fromKey)
-              const to = canvasCards.find((c) => c.uniqueKey === r.toKey)
-              if (!from || !to) return null
+                  <svg className="absolute left-0 top-0 w-full h-full pointer-events-none">
+                      {relations.map((r, i) => {
+                          const from = canvasCards.find((c) => c.uniqueKey === r.fromKey)
+                          const to = canvasCards.find((c) => c.uniqueKey === r.toKey)
+                          if (!from || !to) return null
 
-              const A = instancePixelPos(from)
-              const B = instancePixelPos(to)
+                          const A = instancePixelPos(from)
+                          const B = instancePixelPos(to)
 
-              // Start point: bottom center of source card
-              const startX = A.px + A.w / 2
-              const startY = A.py + A.h
+                          // Start point: bottom center of source card
+                          const startX = A.px + A.w / 2
+                          const startY = A.py + A.h
 
-              // End point: top center of target card
-              const endX = B.px + B.w / 2
-              const endY = B.py
+                          // End point: top center of target card
+                          const endX = B.px + B.w / 2
+                          const endY = B.py
 
-              // Create U-shaped connection with straight lines
-              const midY = startY + (endY - startY) / 2
+                          // Create U-shaped connection with straight lines
+                          const midY = startY + (endY - startY) / 2
 
-              return (
-                <g key={i}>
-                  {/* Vertical line down from source card */}
-                  <line x1={startX} y1={startY} x2={startX} y2={midY} stroke="#000" strokeWidth={3} />
-                  {/* Horizontal line connecting the two vertical lines */}
-                  <line x1={startX} y1={midY} x2={endX} y2={midY} stroke="#000" strokeWidth={3} />
-                  {/* Vertical line up to target card */}
-                  <line x1={endX} y1={midY} x2={endX} y2={endY} stroke="#000" strokeWidth={3} />
-                </g>
-              )
-            })}
-          </svg>
+                          // Triangle arrow size
+                          const arrowW = 16
+                          const arrowH = 12
 
-          {canvasCards.map((c) => {
-            const { px, py } = instancePixelPos(c)
-            const parents = getParents(c.uniqueKey)
-            return (
-              <div
-                key={c.uniqueKey}
-                onMouseDown={(e) => handleDragCanvasCard(e, c.uniqueKey)}
-                onClick={(e) => toggleSelectUnique(e, c.uniqueKey)}
-                onMouseEnter={() => setHoveredCard({ ...c, parents })}
-                onMouseLeave={() => setHoveredCard(null)}
-                style={{
-                  position: "absolute",
-                  left: px,
-                  top: py,
-                  transform: `scale(${zoom})`,
-                  transformOrigin: "top left",
-                }}
-              >
-                <CardNode
-                  data={c}
-                  selected={selected.includes(c.uniqueKey)}
-                  position={{ x: c.x, y: c.y }}
-                  uniqueKey={c.uniqueKey}
-                />
-              </div>
-            )
-          })}
+                          // Arrow at the end of the vertical line, pointing down
+                          return (
+                              <g key={i}>
+                                  {/* Vertical line down from source card */}
+                                  <line x1={startX} y1={startY} x2={startX} y2={midY} stroke="#000" strokeWidth={3} />
+                                  {/* Horizontal line connecting the two vertical lines */}
+                                  <line x1={startX} y1={midY} x2={endX} y2={midY} stroke="#000" strokeWidth={3} />
+                                  {/* Vertical line up to target card */}
+                                  <line x1={endX} y1={midY} x2={endX} y2={endY} stroke="#000" strokeWidth={3} />
+                                  {/* Triangle arrowhead at the top of the target card, pointing down */}
+                                  <polygon
+                                      points={`${endX - arrowW / 2},${endY} ${endX + arrowW / 2},${endY} ${endX},${endY + arrowH}`}
+                                      fill="#111"
+                                  />
+                              </g>
+                          )
+                      })}
+                  </svg>
+
+          {/*// Replace the card rendering block inside canvasCards.map with this:*/}
+
+                  {canvasCards.map((c) => {
+                      const { px, py } = instancePixelPos(c)
+                      const parents = getParents(c.uniqueKey)
+                      return (
+                          <div
+                              key={c.uniqueKey}
+                              onMouseDown={(e) => {
+                                  // Only start drag if mouse is moved (drag threshold)
+                                  let dragStarted = false
+                                  const startX = e.clientX
+                                  const startY = e.clientY
+
+                                  const onMouseMove = (ev) => {
+                                      if (!dragStarted) {
+                                          const dx = Math.abs(ev.clientX - startX)
+                                          const dy = Math.abs(ev.clientY - startY)
+                                          if (dx > 5 || dy > 5) {
+                                              dragStarted = true
+                                              handleDragCanvasCard(e, c.uniqueKey)
+                                          }
+                                      }
+                                  }
+
+                                  const onMouseUp = (ev) => {
+                                      document.removeEventListener("mousemove", onMouseMove)
+                                      document.removeEventListener("mouseup", onMouseUp)
+                                      if (!dragStarted) {
+                                          // If mouse didn't move much, treat as click/select
+                                          toggleSelectUnique(e, c.uniqueKey)
+                                      }
+                                  }
+
+                                  document.addEventListener("mousemove", onMouseMove)
+                                  document.addEventListener("mouseup", onMouseUp)
+                              }}
+                              onMouseEnter={() => setHoveredCard({ ...c, parents })}
+                              onMouseLeave={() => setHoveredCard(null)}
+                              style={{
+                                  position: "absolute",
+                                  left: px,
+                                  top: py,
+                                  transform: `scale(${zoom})`,
+                                  transformOrigin: "top left",
+                              }}
+                          >
+                              <CardNode
+                                  data={c}
+                                  selected={selected.includes(c.uniqueKey)}
+                                  position={{ x: c.x, y: c.y }}
+                                  uniqueKey={c.uniqueKey}
+                              />
+                          </div>
+                      )
+                  })}
 
           <div className="absolute left-1/2 -translate-x-1/2 bottom-3 bg-gray-800 px-3 py-1 rounded shadow">
             <span className="text-xs">Zoom</span>
@@ -727,7 +845,7 @@ export default function Reviews() {
           </div>
         </div>
       </div>
-      <Footer />
+    
     </div>
   )
 }
