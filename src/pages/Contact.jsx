@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
-import Footer from "../components/MyFooter";
+import React, { useState, useEffect } from 'react';
+import AOS from "aos";
+import "aos/dist/aos.css";
+
+import bgImage from "../assets/slider-bg-1.jpg";
 import Navbar from "../components/MyNavbar";
 import { contactAPI } from '../api/endpoints';
+import { FaFacebookF, FaTwitter, FaInstagram, FaDiscord } from "react-icons/fa";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -12,6 +16,10 @@ const Contact = () => {
   });
   const [submitted, setSubmitted] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
+
+  useEffect(() => {
+    AOS.init({ duration: 1200, once: true, easing: "ease-in-out" });
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -118,24 +126,58 @@ const Contact = () => {
   };
 
   return (
-    <div className="bg-gray-900 min-h-screen">
+    <div className="bg-gray-950 min-h-screen text-white font-sans">
       <Navbar />
 
-      {/* Header Section */}
-      <section className="relative bg-gradient-to-r from-purple-800 to-pink-600 text-white py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-5xl md:text-6xl font-bold mb-4">Liên Hệ Với Chúng Tôi</h1>
-          <p className="text-xl opacity-90">Chúng tôi luôn sẵn sàng hỗ trợ bạn 24/7</p>
+      {/* Hero Section */}
+      <section
+        className="relative flex items-center justify-center text-center min-h-[80vh]"
+        style={{
+          backgroundImage: `url(${bgImage})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 to-black/90"></div>
+
+        <div className="relative z-10 max-w-4xl mx-auto px-6">
+          <h1
+            data-aos="zoom-in"
+            className="text-6xl md:text-8xl font-extrabold mb-6 
+                       text-transparent bg-clip-text 
+                       bg-gradient-to-r from-pink-400 via-purple-500 to-indigo-400
+                       animate-text-glow"
+          >
+            Contact Us
+          </h1>
+          <p
+            data-aos="fade-up"
+            className="text-gray-200 text-xl md:text-2xl mb-10 leading-relaxed"
+          >
+            We're here to help you 24/7. Get in touch with our support team for any questions or assistance.
+          </p>
         </div>
       </section>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-16 bg-gray-900 text-white">
-        <div className="grid lg:grid-cols-3 gap-8">
+      <section className="py-20 bg-gradient-to-b from-gray-900 to-gray-950">
+        <div className="max-w-7xl mx-auto px-6 md:px-16">
+          <h2
+            data-aos="fade-up"
+            className="text-5xl font-extrabold text-center mb-12 
+                       text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500"
+          >
+            Get In Touch
+          </h2>
+          
+          <div className="grid lg:grid-cols-3 gap-8">
           {/* Cột trái - Thông tin liên hệ */}
           <div className="lg:col-span-1">
             {/* 1. Thông tin liên hệ cơ bản */}
-            <div className="bg-gray-800 rounded-xl shadow-lg p-6 mb-8 border border-gray-700">
+            <div 
+              data-aos="fade-up"
+              className="bg-gray-800 rounded-2xl shadow-xl p-6 mb-8 border border-gray-700
+                         transform transition-all duration-500 hover:scale-105 hover:shadow-pink-400/50">
               <h2 className="text-2xl font-bold text-pink-400 mb-6 flex items-center">
                 <span className="bg-pink-500 p-2 rounded-lg mr-3 text-white">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -198,7 +240,11 @@ const Contact = () => {
             </div>
 
             {/* 3. Kênh cộng đồng */}
-            <div className="bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-700">
+            <div 
+              data-aos="fade-up" 
+              data-aos-delay="200"
+              className="bg-gray-800 rounded-2xl shadow-xl p-6 border border-gray-700
+                         transform transition-all duration-500 hover:scale-105 hover:shadow-purple-400/50">
               <h2 className="text-2xl font-bold text-pink-400 mb-6 flex items-center">
                 <span className="bg-purple-500 p-2 rounded-lg mr-3 text-white">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -227,7 +273,10 @@ const Contact = () => {
           {/* Cột phải - Form liên hệ và FAQ */}
           <div className="lg:col-span-2">
             {/* 2. Form liên hệ */}
-            <div className="bg-gray-800 rounded-xl shadow-lg p-8 mb-8 border border-gray-700">
+            <div 
+              data-aos="fade-left"
+              className="bg-gray-800 rounded-2xl shadow-xl p-8 mb-8 border border-gray-700
+                         transform transition-all duration-500 hover:scale-105 hover:shadow-green-400/50">
               <h2 className="text-2xl font-bold text-pink-400 mb-6 flex items-center">
                 <span className="bg-green-500 p-2 rounded-lg mr-3 text-white">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -346,7 +395,11 @@ const Contact = () => {
             </div>
 
             {/* 4. FAQ */}
-            <div className="bg-gray-800 rounded-xl shadow-lg p-8 border border-gray-700">
+            <div 
+              data-aos="fade-left" 
+              data-aos-delay="200"
+              className="bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-700
+                         transform transition-all duration-500 hover:scale-105 hover:shadow-yellow-400/50">
               <h2 className="text-2xl font-bold text-pink-400 mb-6 flex items-center">
                 <span className="bg-yellow-500 p-2 rounded-lg mr-3 text-white">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -381,41 +434,78 @@ const Contact = () => {
           </div>
         </div>
 
-        {/* 5. Thông tin bản quyền & pháp lý */}
-        <footer className="mt-16 bg-gray-800 text-white rounded-xl p-8 border border-gray-700">
-          <div className="grid md:grid-cols-3 gap-8 text-center md:text-left">
-            <div>
-              <h3 className="font-bold text-lg mb-4 text-pink-400">Công ty</h3>
-              <p className="text-gray-300">Công ty TNHH GameCard Studio</p>
-              <p className="text-gray-300">Mã số thuế: 0123456789</p>
-            </div>
-            <div>
-              <h3 className="font-bold text-lg mb-4 text-pink-400">Pháp lý</h3>
-              <div className="space-y-2">
-                <a href="/terms" className="block text-pink-400 hover:text-pink-300 transition-colors flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Điều khoản dịch vụ
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-950 text-gray-300 pt-12 pb-6">
+        <div className="max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-3 gap-10">
+          {/* Logo & About */}
+          <div>
+            <h2 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-500 mb-4">
+              GameVerse
+            </h2>
+            <p className="text-sm leading-relaxed text-gray-400">
+              Enter the world of strategy and adventure. Collect cards, master
+              your deck, and conquer realms across devices with one account.
+            </p>
+          </div>
+
+          {/* Quick Links */}
+          <div>
+            <h3 className="text-lg font-semibold text-yellow-400 mb-4">
+              Quick Links
+            </h3>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <a href="/" className="hover:text-pink-400 transition">
+                  🎮 Home
                 </a>
-                <a href="/privacy" className="block text-pink-400 hover:text-pink-300 transition-colors flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                  Chính sách bảo mật
+              </li>
+              <li>
+                <a href="/shop" className="hover:text-pink-400 transition">
+                  🛒 Shop
                 </a>
-              </div>
-            </div>
-            <div>
-              <h3 className="font-bold text-lg mb-4 text-pink-400">Bản quyền</h3>
-              <p className="text-gray-300">© 2025 GameCard Studio</p>
-              <p className="text-gray-300">All rights reserved</p>
+              </li>
+              <li>
+                <a href="/reviews" className="hover:text-pink-400 transition">
+                  ⭐ Reviews
+                </a>
+              </li>
+              <li>
+                <a href="/contact" className="hover:text-pink-400 transition">
+                  📞 Contact
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Social Media */}
+          <div>
+            <h3 className="text-lg font-semibold text-yellow-400 mb-4">
+              Follow Us
+            </h3>
+            <div className="flex gap-4 text-xl">
+              {[FaFacebookF, FaTwitter, FaInstagram, FaDiscord].map(
+                (Icon, i) => (
+                  <a
+                    key={i}
+                    href="#"
+                    className="p-3 rounded-full bg-gray-700 hover:bg-pink-500 
+                               hover:scale-125 transition transform duration-300"
+                  >
+                    <Icon />
+                  </a>
+                )
+              )}
             </div>
           </div>
-        </footer>
-      </div>
+        </div>
 
-      <Footer />
+        <div className="border-t border-gray-700 mt-10 pt-6 text-center text-sm text-gray-500">
+          © {new Date().getFullYear()} GameVerse. All rights reserved.
+        </div>
+      </footer>
     </div>
   );
 };

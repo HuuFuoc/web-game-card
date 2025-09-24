@@ -1,7 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { FaCoins } from "react-icons/fa";
 
-const Navbar = () => (
+const Navbar = ({ userMoney, showMoney = false }) => (
     <header
         className="bg-[#0c1022]"
         style={{
@@ -52,8 +53,8 @@ const Navbar = () => (
                         </Link>
                     </li>
                     <li>
-                        <Link to="/news" className="hover:text-pink-400">
-                            News
+                        <Link to="/shop" className="hover:text-pink-400">
+                            Shop
                         </Link>
                     </li>
                     <li>
