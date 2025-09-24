@@ -403,19 +403,36 @@ export default function Reviews() {
         const ukey = `new-${uniqueCounter}`
         setUniqueCounter((c) => c + 1)
 
-        // Find the last fusion card
-        const fusionCards = canvasCards.filter(c => c.isFusion)
+        // Find previous fusion cards created from the same pair (order doesn't matter)
+        const pairKeys = [...selected].sort().join("|")
+        const previousFusions = canvasCards.filter(c =>
+            c.isFusion &&
+            c.description &&
+            (() => {
+                const parents = relations
+                    .filter(r => r.toKey === c.uniqueKey)
+                    .map(r => r.fromKey)
+                    .sort()
+                    .join("|")
+                return parents === pairKeys
+            })()
+        )
+
+        // Always apply vertical margin, even for the first fusion
+        const verticalMargin = 40
         let mapX, mapY
-        if (fusionCards.length > 0) {
-            // Place to the right of the last fusion card
-            const lastFusion = fusionCards[fusionCards.length - 1]
-            mapX = lastFusion.x + CARD_W + 32 // 32px gap
-            mapY = lastFusion.y
+        if (previousFusions.length > 0) {
+            const lastFusion = previousFusions[previousFusions.length - 1]
+            mapX = lastFusion.x + CARD_W + 32
+            mapY = lastFusion.y + verticalMargin
+        } else if (selectedCards.length > 0) {
+            const firstCard = selectedCards[0]
+            mapX = firstCard.x + CARD_W + 32
+            mapY = firstCard.y + verticalMargin
         } else {
-            // First fusion card: center
             const rect = containerRef.current.getBoundingClientRect()
             mapX = (rect.width / 2 - pan.x) / zoom - CARD_W / 2
-            mapY = (rect.height / 2 - pan.y) / zoom - CARD_H / 2
+            mapY = (rect.height / 2 - pan.y) / zoom - CARD_H / 2 + verticalMargin
         }
 
         const newCard = {
