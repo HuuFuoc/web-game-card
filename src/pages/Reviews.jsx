@@ -577,7 +577,7 @@ export default function Reviews() {
         const onKey = (e) => {
             if (e.key === "Escape") setSelected([])
 
-            // Block browser zoom: Ctrl + "+" or Ctrl + "-" or Ctrl + "="
+            // Block browser zoom: Ctrl/Meta + "+" or "-" or "="
             if (
                 (e.ctrlKey || e.metaKey) &&
                 (e.key === "+" || e.key === "-" || e.key === "=")
@@ -585,14 +585,23 @@ export default function Reviews() {
                 e.preventDefault()
             }
         }
+
+        // Block browser zoom on wheel + Ctrl/Meta
+        const onWheel = (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault()
+            }
+        }
+
         window.addEventListener("keydown", onKey, { passive: false })
+        window.addEventListener("wheel", onWheel, { passive: false })
 
         // Mouse wheel zoom for map container
         const container = containerRef.current
         if (container) {
             const handleWheel = (e) => {
                 // Only zoom if Ctrl is NOT pressed (avoid browser zoom)
-                if (e.ctrlKey) return
+                if (e.ctrlKey || e.metaKey) return
                 e.preventDefault()
                 const delta = e.deltaY
                 let newZoom = zoom
@@ -612,6 +621,7 @@ export default function Reviews() {
             // Cleanup wheel event
             return () => {
                 window.removeEventListener("keydown", onKey)
+                window.removeEventListener("wheel", onWheel)
                 container.removeEventListener("wheel", handleWheel)
             }
         }
@@ -619,6 +629,7 @@ export default function Reviews() {
         // Cleanup keyboard event if container is not mounted
         return () => {
             window.removeEventListener("keydown", onKey)
+            window.removeEventListener("wheel", onWheel)
         }
     }, [zoom, pan])
 
