@@ -67,6 +67,24 @@ export default function Reviews() {
     const panStartRef = useRef({ mouseX: 0, mouseY: 0, panX: 0, panY: 0 })
     const minimapRef = useRef(null)
     const MINIMAP_SIZE = 200
+    const MINIMAP_PAD = 40
+
+    const getContentBounds = () => {
+        if (canvasCards.length === 0) {
+            return {
+                minX: -CARD_W, minY: -CARD_H,
+                maxX: CARD_W, maxY: CARD_H,
+            }
+        }
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+        canvasCards.forEach((c) => {
+            minX = Math.min(minX, c.x)
+            minY = Math.min(minY, c.y)
+            maxX = Math.max(maxX, c.x + CARD_W)
+            maxY = Math.max(maxY, c.y + CARD_H)
+        })
+        return { minX, minY, maxX, maxY }
+    }
 
     // ResizeObserver to scale cards based on available canvas width
     useEffect(() => {
@@ -125,21 +143,7 @@ export default function Reviews() {
                 onMouseLeave={() => setHovered(false)}
             >
                 {data.isFusion && (
-                    <svg
-                        width="32"
-                        height="24"
-                        style={{
-                            position: "absolute",
-                            top: -24,
-                            left: "50%",
-                            transform: "translateX(-50%) rotate(180deg)",
-                            zIndex: 30,
-                            pointerEvents: "none",
-                        }}
-                        viewBox="0 0 32 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
+                    <svg width="32" height="24" style={{ position: "absolute", top: -24, left: "50%", transform: "translateX(-50%) rotate(180deg)", zIndex: 30, pointerEvents: "none" }} viewBox="0 0 32 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <polygon points="16,0 32,20 0,20" fill="#111" />
                         <rect x="12" y="20" width="8" height="4" fill="#111" />
                     </svg>
@@ -672,22 +676,28 @@ export default function Reviews() {
     }
 
     const handleMinimapClick = (e) => {
-        const rect = containerRef.current.getBoundingClientRect()
-        const worldWidth = rect.width * zoom
-        const worldHeight = rect.height * zoom
+        const containerRect = containerRef.current.getBoundingClientRect()
+        const miniRect = minimapRef.current.getBoundingClientRect()
 
-        const minimapRect = minimapRef.current.getBoundingClientRect()
-        const clickX = e.clientX - minimapRect.left
-        const clickY = e.clientY - minimapRect.top
+        const { minX, minY, maxX, maxY } = getContentBounds()
+        const contentW = Math.max(1, maxX - minX)
+        const contentH = Math.max(1, maxY - minY)
 
-        const normalizedX = clickX / MINIMAP_SIZE
-        const normalizedY = clickY / MINIMAP_SIZE
+        const scale = Math.min(
+            MINIMAP_SIZE / (contentW + MINIMAP_PAD * 2),
+            MINIMAP_SIZE / (contentH + MINIMAP_PAD * 2)
+        )
 
-        const desiredWorldX = normalizedX * worldWidth
-        const desiredWorldY = normalizedY * worldHeight
+        const clickX = e.clientX - miniRect.left
+        const clickY = e.clientY - miniRect.top
 
-        const newPanX = rect.width / 2 - desiredWorldX
-        const newPanY = rect.height / 2 - desiredWorldY
+        // minimap -> world (unscaled) coords
+        const worldX = (clickX / scale) + (minX - MINIMAP_PAD)
+        const worldY = (clickY / scale) + (minY - MINIMAP_PAD)
+
+        // center viewport on that world point
+        const newPanX = containerRect.width / 2 - worldX * zoom
+        const newPanY = containerRect.height / 2 - worldY * zoom
         setPan({ x: newPanX, y: newPanY })
     }
 
@@ -1029,41 +1039,94 @@ export default function Reviews() {
                         Cập nhật thẻ
                     </button>
                     <div className="flex-1"></div>
-                    {/* Minimap */}
+                    {/* Minimap (desktop only) */}
                     <div>
                         <h4 className="text-sm mb-1">Minimap</h4>
                         <div
                             ref={minimapRef}
                             onClick={handleMinimapClick}
                             className="relative bg-gray-700 border border-gray-500"
-                            style={{ width: MINIMAP_SIZE, height: MINIMAP_SIZE }}
+                            style={{ width: MINIMAP_SIZE, height: MINIMAP_SIZE, overflow: "hidden" }}  // <- add overflow hidden
                         >
                             {(() => {
                                 const rect = containerRef.current?.getBoundingClientRect()
                                 if (!rect) return null
-                                const worldWidth = rect.width * zoom
-                                const worldHeight = rect.height * zoom
-                                return canvasCards.map((c) => {
-                                    const { px, py, w, h } = instancePixelPos(c)
-                                    const minix = (px / worldWidth) * MINIMAP_SIZE
-                                    const miniy = (py / worldHeight) * MINIMAP_SIZE
-                                    const miniw = (w / worldWidth) * MINIMAP_SIZE
-                                    const minih = (h / worldHeight) * MINIMAP_SIZE
-                                    return (
+
+                                const { minX, minY, maxX, maxY } = getContentBounds()
+                                const contentW = Math.max(1, maxX - minX)
+                                const contentH = Math.max(1, maxY - minY)
+
+                                const scale = Math.min(
+                                    MINIMAP_SIZE / (contentW + MINIMAP_PAD * 2),
+                                    MINIMAP_SIZE / (contentH + MINIMAP_PAD * 2)
+                                )
+
+                                const toMiniX = (wx) => (wx - (minX - MINIMAP_PAD)) * scale
+                                const toMiniY = (wy) => (wy - (minY - MINIMAP_PAD)) * scale
+
+                                // viewport in world coords
+                                const viewX = -pan.x / zoom
+                                const viewY = -pan.y / zoom
+                                const viewW = rect.width / zoom
+                                const viewH = rect.height / zoom
+
+                                // map to minimap space
+                                const vx = toMiniX(viewX)
+                                const vy = toMiniY(viewY)
+                                const vw = viewW * scale
+                                const vh = viewH * scale
+
+                                // clamp to the minimap box
+                                const clamp01 = (n, min, max) => Math.min(max, Math.max(min, n))
+                                const x0 = clamp01(vx, 0, MINIMAP_SIZE)
+                                const y0 = clamp01(vy, 0, MINIMAP_SIZE)
+                                const x1 = clamp01(vx + vw, 0, MINIMAP_SIZE)
+                                const y1 = clamp01(vy + vh, 0, MINIMAP_SIZE)
+                                const clampedView = {
+                                    left: x0,
+                                    top: y0,
+                                    width: Math.max(2, x1 - x0),
+                                    height: Math.max(2, y1 - y0),
+                                }
+
+                                return (
+                                    <>
+                                        {canvasCards.map((c) => {
+                                            const mx = toMiniX(c.x)
+                                            const my = toMiniY(c.y)
+                                            const mw = CARD_W * scale
+                                            const mh = CARD_H * scale
+                                            return (
+                                                <div
+                                                    key={c.uniqueKey}
+                                                    style={{
+                                                        position: "absolute",
+                                                        left: mx,
+                                                        top: my,
+                                                        width: mw,
+                                                        height: mh,
+                                                        background: "#ec4899",
+                                                        borderRadius: 2,
+                                                    }}
+                                                />
+                                            )
+                                        })}
+                                        {/* clamped viewport outline */}
                                         <div
-                                            key={c.uniqueKey}
                                             style={{
                                                 position: "absolute",
-                                                left: minix,
-                                                top: miniy,
-                                                width: miniw,
-                                                height: minih,
-                                                background: "#ec4899",
-                                                transition: "left 150ms ease, top 150ms ease",
+                                                left: clampedView.left,
+                                                top: clampedView.top,
+                                                width: clampedView.width,
+                                                height: clampedView.height,
+                                                border: "2px solid #10b981",
+                                                background: "rgba(16,185,129,0.12)",
+                                                pointerEvents: "none",
+                                                boxShadow: "0 0 0 1px rgba(0,0,0,0.25) inset",
                                             }}
                                         />
-                                    )
-                                })
+                                    </>
+                                )
                             })()}
                         </div>
                     </div>
@@ -1122,7 +1185,7 @@ export default function Reviews() {
                 </div>
             )}
 
-            {/* Mobile Overlays - Actions */}
+            {/* Mobile Overlays - Actions (no minimap on mobile) */}
             {showActionsPanel && (
                 <div className="fixed inset-0 z-50 md:hidden">
                     <div
@@ -1130,7 +1193,7 @@ export default function Reviews() {
                         onClick={closeActionsPanel}
                     />
                     <div
-                        className={`absolute bottom-0 left-0 right-0 bg-gray-800 rounded-t-2xl px-4 pb-4 pt-6 max-h-[80vh] overflow-y-auto transform transition-transform duration-200 ease-out ${actionsPanelOpen ? "translate-y-0" : "translate-y-full"}`}
+                        className={`absolute bottom-0 left-0 right-0 bg-gray-800 rounded-t-2xl px-4 pb-4 pt-6 max-h-[70vh] overflow-y-auto transform transition-transform duration-200 ease-out ${actionsPanelOpen ? "translate-y-0" : "translate-y-full"}`}
                         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
                     >
                         <div className="flex items-center justify-between mb-3">
@@ -1149,43 +1212,6 @@ export default function Reviews() {
                             <button onClick={handleUpdate} className="flex-1 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded transition-colors">
                                 Cập nhật
                             </button>
-                        </div>
-                        <div className="mt-4">
-                            <h4 className="text-sm mb-1">Minimap</h4>
-                            <div
-                                ref={minimapRef}
-                                onClick={handleMinimapClick}
-                                className="relative bg-gray-700 border border-gray-500 mx-auto"
-                                style={{ width: MINIMAP_SIZE, height: MINIMAP_SIZE }}
-                            >
-                                {(() => {
-                                    const rect = containerRef.current?.getBoundingClientRect()
-                                    if (!rect) return null
-                                    const worldWidth = rect.width * zoom
-                                    const worldHeight = rect.height * zoom
-                                    return canvasCards.map((c) => {
-                                        const { px, py, w, h } = instancePixelPos(c)
-                                        const minix = (px / worldWidth) * MINIMAP_SIZE
-                                        const miniy = (py / worldHeight) * MINIMAP_SIZE
-                                        const miniw = (w / worldWidth) * MINIMAP_SIZE
-                                        const minih = (h / worldHeight) * MINIMAP_SIZE
-                                        return (
-                                            <div
-                                                key={c.uniqueKey}
-                                                style={{
-                                                    position: "absolute",
-                                                    left: minix,
-                                                    top: miniy,
-                                                    width: miniw,
-                                                    height: minih,
-                                                    background: "#ec4899",
-                                                    transition: "left 150ms ease, top 150ms ease",
-                                                }}
-                                            />
-                                        )
-                                    })
-                                })()}
-                            </div>
                         </div>
                     </div>
                 </div>
