@@ -57,16 +57,14 @@ const Register = () => {
 
     const validateForm = () => {
         const newErrors = {};
-        
         newErrors.username = validateUsername(formData.username);
         newErrors.email = validateEmail(formData.email);
         newErrors.password = validatePassword(formData.password);
-        
-        // Remove empty errors
+
         Object.keys(newErrors).forEach(key => {
             if (!newErrors[key]) delete newErrors[key];
         });
-        
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -77,8 +75,7 @@ const Register = () => {
             ...prev,
             [id]: value
         }));
-        
-        // Real-time validation
+
         let error = '';
         if (id === 'username') {
             error = validateUsername(value);
@@ -87,7 +84,7 @@ const Register = () => {
         } else if (id === 'password') {
             error = validatePassword(value);
         }
-        
+
         setErrors(prev => ({
             ...prev,
             [id]: error
@@ -98,7 +95,6 @@ const Register = () => {
         e.preventDefault();
         if (validateForm()) {
             console.log('Form is valid', formData);
-            // Handle registration logic here
             alert('Registration successful!');
         }
     };
@@ -116,10 +112,12 @@ const Register = () => {
             >
                 {/* Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-b from-[#7c2a7a99] to-[#0c1022cc]"></div>
+
                 {/* Form Card */}
                 <div className="relative z-10 w-full flex flex-col items-center justify-center mt-12">
                     <div className="bg-[#18182a] bg-opacity-95 rounded-xl shadow-2xl p-8 max-w-md w-full">
                         <h2 className="text-3xl font-bold text-white mb-6 text-center">Register</h2>
+
                         <form onSubmit={handleSubmit}>
                             <div className="mb-4">
                                 <label htmlFor="username" className="block text-gray-300 font-medium mb-2">
@@ -139,6 +137,7 @@ const Register = () => {
                                     <p className="text-red-500 text-sm mt-1">{errors.username}</p>
                                 )}
                             </div>
+
                             <div className="mb-4">
                                 <label htmlFor="email" className="block text-gray-300 font-medium mb-2">
                                     Email
@@ -157,6 +156,7 @@ const Register = () => {
                                     <p className="text-red-500 text-sm mt-1">{errors.email}</p>
                                 )}
                             </div>
+
                             <div className="mb-6">
                                 <label htmlFor="password" className="block text-gray-300 font-medium mb-2">
                                     Password
@@ -175,6 +175,7 @@ const Register = () => {
                                     <p className="text-red-500 text-sm mt-1">{errors.password}</p>
                                 )}
                             </div>
+
                             <button
                                 type="submit"
                                 className="w-full py-3 rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-lg shadow-lg hover:from-pink-600 hover:to-purple-700 transition"
@@ -182,10 +183,21 @@ const Register = () => {
                                 Register
                             </button>
                         </form>
+
+                        {/* Links */}
                         <div className="text-center mt-4 text-gray-400">
                             Already have an account?{" "}
                             <Link to="/login" className="text-pink-400 underline hover:text-pink-500">
                                 Login
+                            </Link>
+                        </div>
+
+                        <div className="text-center mt-2">
+                            <Link
+                                to="/"
+                                className="text-gray-300 underline hover:text-white"
+                            >
+                                ← Back to Home
                             </Link>
                         </div>
                     </div>

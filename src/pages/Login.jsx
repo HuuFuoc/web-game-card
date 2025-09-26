@@ -5,7 +5,6 @@ import bgImage from "../assets/slider-bg-1.jpg";
 const Login = () => {
     return (
         <div className="bg-gray-900 min-h-screen">
-            {/* Login Section */}
             <section
                 className="relative flex items-center justify-center min-h-[100vh]"
                 style={{
@@ -14,10 +13,8 @@ const Login = () => {
                     backgroundPosition: "center",
                 }}
             >
-                {/* Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-b from-[#7c2a7a99] to-[#0c1022cc]"></div>
 
-                {/* Form Card */}
                 <div className="relative z-10 w-full flex flex-col items-center justify-center mt-12">
                     <div className="bg-[#18182a] bg-opacity-95 rounded-xl shadow-2xl p-8 max-w-md w-full">
                         <h2 className="text-3xl font-bold text-white mb-6 text-center">Login</h2>
@@ -35,7 +32,7 @@ const Login = () => {
                                 />
                             </div>
 
-                            <div className="mb-6">
+                            <div className="mb-4">
                                 <label htmlFor="password" className="block text-gray-300 font-medium mb-2">
                                     Password
                                 </label>
@@ -54,6 +51,20 @@ const Login = () => {
                                 Login
                             </button>
                         </form>
+
+                        {/* Forgot password */}
+                        <div className="text-center mt-4">
+                            <Link to="/forgot-password" className="text-pink-400 underline hover:text-pink-500">
+                                Forgot your password?
+                            </Link>
+                        </div>
+
+                        {/* Back to Home */}
+                        <div className="text-center mt-2">
+                            <Link to="/" className="text-pink-400 underline hover:text-pink-500">
+                                Back to Home
+                            </Link>
+                        </div>
 
                         <div className="text-center mt-4 text-gray-400">
                             Don’t have an account?{" "}
