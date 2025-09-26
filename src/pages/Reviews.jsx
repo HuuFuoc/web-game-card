@@ -10,6 +10,10 @@ export default function Reviews() {
     const [CARD_W, setCARD_W] = useState(200)
     const [CARD_H, setCARD_H] = useState(280)
 
+    // Zoom bounds (unified)
+    const MIN_ZOOM = 0.35
+    const MAX_ZOOM = 3
+
     const clamp = (n, min, max) => Math.min(max, Math.max(min, n))
 
     const isTouchDevice =
@@ -33,9 +37,30 @@ export default function Reviews() {
     const [pan, setPan] = useState({ x: 0, y: 0 })
     const [hoveredCard, setHoveredCard] = useState(null)
 
-    // Mobile overlays
-    const [showCardsPanel, setShowCardsPanel] = useState(false)
+    // Mobile overlays + animation states
+    const [showCardsPanel, setShowCardsPanel] = useState(false)   // mounted
+    const [cardsPanelOpen, setCardsPanelOpen] = useState(false)   // for transition
     const [showActionsPanel, setShowActionsPanel] = useState(false)
+    const [actionsPanelOpen, setActionsPanelOpen] = useState(false)
+    const ANIM_MS = 220
+
+    const openCardsPanel = () => {
+        setShowCardsPanel(true)
+        requestAnimationFrame(() => setCardsPanelOpen(true))
+    }
+    const closeCardsPanel = () => {
+        setCardsPanelOpen(false)
+        setTimeout(() => setShowCardsPanel(false), ANIM_MS)
+    }
+
+    const openActionsPanel = () => {
+        setShowActionsPanel(true)
+        requestAnimationFrame(() => setActionsPanelOpen(true))
+    }
+    const closeActionsPanel = () => {
+        setActionsPanelOpen(false)
+        setTimeout(() => setShowActionsPanel(false), ANIM_MS)
+    }
 
     const containerRef = useRef(null)
     const isPanningRef = useRef(false)
@@ -93,7 +118,7 @@ export default function Reviews() {
                     fontFamily: "serif",
                     transform: `scale(${cardScale * (isSelected ? 1.05 : 1)})`,
                     transformOrigin: "top left",
-                    transition: "all 0.25s ease",
+                    transition: "transform 200ms ease, box-shadow 200ms ease, filter 200ms ease",
                     paddingTop: 24,
                 }}
                 onMouseEnter={() => setHovered(true)}
@@ -135,11 +160,15 @@ export default function Reviews() {
                         cursor: "pointer",
                         zIndex: 20,
                         boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                        transition: "transform 150ms ease",
                     }}
                     onClick={(e) => {
                         e.stopPropagation()
                         console.log(" Top connection node ", uniqueKey)
                     }}
+                    onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.9)")}
+                    onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
                 />
 
                 {/* Bottom node */}
@@ -157,11 +186,15 @@ export default function Reviews() {
                         cursor: "pointer",
                         zIndex: 20,
                         boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                        transition: "transform 150ms ease",
                     }}
                     onClick={(e) => {
                         e.stopPropagation()
                         console.log(" Bottom connection node ", uniqueKey)
                     }}
+                    onMouseDown={(e) => (e.currentTarget.style.transform = "translateX(-50%) scale(0.9)")}
+                    onMouseUp={(e) => (e.currentTarget.style.transform = "translateX(-50%) scale(1)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = "translateX(-50%) scale(1)")}
                 />
 
                 {/* Cost circle */}
@@ -185,7 +218,11 @@ export default function Reviews() {
                         fontWeight: "bold",
                         zIndex: 10,
                         boxShadow: isSelected ? "0 2px 8px rgba(245, 158, 11, 0.4)" : "0 2px 8px rgba(127, 29, 29, 0.4)",
+                        transition: "transform 150ms ease",
                     }}
+                    onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.96)")}
+                    onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
                 >
                     {data.power || "--"}
                 </div>
@@ -306,6 +343,8 @@ export default function Reviews() {
                             fontSize: 12,
                             lineHeight: 1.4,
                             border: isSelected ? "2px solid #F59E0B" : "2px solid #DC2626",
+                            opacity: 1,
+                            transition: "opacity 150ms ease",
                         }}
                     >
                         <div>
@@ -388,6 +427,24 @@ export default function Reviews() {
 
         document.addEventListener("mousemove", onMouseMove)
         document.addEventListener("mouseup", onMouseUp)
+    }
+
+    // Zoom helpers
+    const handleZoomChangeAt = (pixelX, pixelY, newZoom) => {
+        const rect = containerRef.current.getBoundingClientRect()
+        // World coordinate under the pixel
+        const centerMapX = (pixelX - pan.x) / zoom
+        const centerMapY = (pixelY - pan.y) / zoom
+        const clamped = clamp(newZoom, MIN_ZOOM, MAX_ZOOM)
+        const newPanX = pixelX - centerMapX * clamped
+        const newPanY = pixelY - centerMapY * clamped
+        setZoom(clamped)
+        setPan({ x: newPanX, y: newPanY })
+    }
+
+    const handleZoomChange = (newZoom) => {
+        const rect = containerRef.current.getBoundingClientRect()
+        handleZoomChangeAt(rect.width / 2, rect.height / 2, newZoom)
     }
 
     // Pointer-based drag for cards (touch + mouse)
@@ -579,22 +636,9 @@ export default function Reviews() {
         )
     }
 
-    const handleZoomChange = (newZoom) => {
-        const rect = containerRef.current.getBoundingClientRect()
-        const centerPixelX = rect.width / 2
-        const centerPixelY = rect.height / 2
-        const centerMapX = (centerPixelX - pan.x) / zoom
-        const centerMapY = (centerPixelY - pan.y) / zoom
-
-        const newPanX = centerPixelX - centerMapX * newZoom
-        const newPanY = centerPixelY - centerMapY * newZoom
-
-        setZoom(newZoom)
-        setPan({ x: newPanX, y: newPanY })
-    }
-
-    const zoomIn = () => handleZoomChange(clamp(zoom + 0.12, 0.4, 2))
-    const zoomOut = () => handleZoomChange(clamp(zoom - 0.12, 0.4, 2))
+    // Multiplicative zoom buttons feel better on mobile
+    const zoomIn = () => handleZoomChange(zoom * 1.12)
+    const zoomOut = () => handleZoomChange(zoom / 1.12)
 
     const fitToView = () => {
         if (canvasCards.length === 0) return
@@ -616,7 +660,7 @@ export default function Reviews() {
 
         const scaleX = rect.width / (bbW + padding * 2)
         const scaleY = rect.height / (bbH + padding * 2)
-        const newZoom = clamp(Math.min(scaleX, scaleY), 0.4, 2)
+        const newZoom = clamp(Math.min(scaleX, scaleY), MIN_ZOOM, MAX_ZOOM)
 
         const worldCx = minX + bbW / 2
         const worldCy = minY + bbH / 2
@@ -656,12 +700,12 @@ export default function Reviews() {
         }
     }
 
-    // Touch support for panning and pinch-to-zoom on canvas background
+    // Touch support for panning, pinch-to-zoom and double-tap zoom
     useEffect(() => {
         const container = containerRef.current
         if (!container) return
 
-        const ts = { pinch: false, startDist: 0, startZoom: 1 }
+        const ts = { pinch: false, startDist: 0, startZoom: 1, lastTap: 0, lastTapX: 0, lastTapY: 0 }
 
         const onTouchStart = (e) => {
             if (e.touches.length === 2) {
@@ -675,14 +719,32 @@ export default function Reviews() {
                 return
             }
 
-            if (e.touches.length === 1 && e.target === container) {
+            if (e.touches.length === 1) {
+                // Double-tap to zoom at tap location
+                const now = Date.now()
+                const rect = container.getBoundingClientRect()
                 const t = e.touches[0]
-                isPanningRef.current = true
-                panStartRef.current = {
-                    mouseX: t.clientX,
-                    mouseY: t.clientY,
-                    panX: pan.x,
-                    panY: pan.y,
+                const px = t.clientX - rect.left
+                const py = t.clientY - rect.top
+                if (now - ts.lastTap < 300 && Math.hypot(px - ts.lastTapX, py - ts.lastTapY) < 40) {
+                    e.preventDefault()
+                    const target = zoom < MAX_ZOOM - 0.01 ? clamp(zoom * 1.6, MIN_ZOOM, MAX_ZOOM) : 1
+                    handleZoomChangeAt(px, py, target)
+                    ts.lastTap = 0
+                    return
+                }
+                ts.lastTap = now
+                ts.lastTapX = px
+                ts.lastTapY = py
+
+                if (e.target === container) {
+                    isPanningRef.current = true
+                    panStartRef.current = {
+                        mouseX: t.clientX,
+                        mouseY: t.clientY,
+                        panX: pan.x,
+                        panY: pan.y,
+                    }
                 }
             }
         }
@@ -694,8 +756,11 @@ export default function Reviews() {
                 const dy = t1.clientY - t2.clientY
                 const dist = Math.hypot(dx, dy)
                 const ratio = dist / ts.startDist
-                const newZoom = clamp(ts.startZoom * ratio, 0.4, 2)
-                handleZoomChange(newZoom)
+                const rect = container.getBoundingClientRect()
+                const midX = (t1.clientX + t2.clientX) / 2 - rect.left
+                const midY = (t1.clientY + t2.clientY) / 2 - rect.top
+                const newZoom = clamp(ts.startZoom * ratio, MIN_ZOOM, MAX_ZOOM)
+                handleZoomChangeAt(midX, midY, newZoom)
                 e.preventDefault()
                 return
             }
@@ -758,17 +823,13 @@ export default function Reviews() {
             const handleWheel = (e) => {
                 if (e.ctrlKey || e.metaKey) return
                 e.preventDefault()
-                const delta = e.deltaY
-                let newZoom = zoom
-
-                if (delta < 0) {
-                    newZoom = clamp(zoom + 0.08, 0.4, 2)
-                } else if (delta > 0) {
-                    newZoom = clamp(zoom - 0.08, 0.4, 2)
-                }
-
+                const rect = container.getBoundingClientRect()
+                const pixelX = e.clientX - rect.left
+                const pixelY = e.clientY - rect.top
+                const scaleFactor = e.deltaY < 0 ? 1.12 : 0.88
+                const newZoom = clamp(zoom * scaleFactor, MIN_ZOOM, MAX_ZOOM)
                 if (newZoom !== zoom) {
-                    handleZoomChange(newZoom)
+                    handleZoomChangeAt(pixelX, pixelY, newZoom)
                 }
             }
             container.addEventListener("wheel", handleWheel, { passive: false })
@@ -822,7 +883,7 @@ export default function Reviews() {
                                 key={c.id}
                                 draggable
                                 onDragStart={(e) => handleDragStartFromList(e, c)}
-                                className="p-2 mb-2 bg-gray-700 rounded cursor-grab hover:bg-gray-600"
+                                className="p-2 mb-2 bg-gray-700 rounded cursor-grab hover:bg-gray-600 transition-colors"
                             >
                                 <div className="font-bold text-sm">{c.id}</div>
                                 <div className="text-xs text-gray-300">Power: {c.power}</div>
@@ -830,10 +891,10 @@ export default function Reviews() {
                             </div>
                         ))}
                     </div>
-                    <button onClick={handleAddCard} className="mt-2 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
+                    <button onClick={handleAddCard} className="mt-2 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded transition-colors">
                         + Tạo thẻ mới
                     </button>
-                    <button onClick={handleRemoveCardFromList} className="mt-2 py-2 px-3 bg-red-600 hover:bg-red-500 rounded">
+                    <button onClick={handleRemoveCardFromList} className="mt-2 py-2 px-3 bg-red-600 hover:bg-red-500 rounded transition-colors">
                         - Xóa thẻ khỏi danh sách
                     </button>
                 </div>
@@ -855,14 +916,14 @@ export default function Reviews() {
                     {/* Mobile toggles for side panels */}
                     <div className="md:hidden absolute top-2 left-2 z-50 flex gap-2">
                         <button
-                            className="px-3 py-1 rounded bg-gray-800/80 backdrop-blur hover:bg-gray-700"
-                            onClick={() => setShowCardsPanel(true)}
+                            className="px-3 py-1 rounded bg-gray-800/80 backdrop-blur hover:bg-gray-700 transition-colors"
+                            onClick={openCardsPanel}
                         >
                             Cards
                         </button>
                         <button
-                            className="px-3 py-1 rounded bg-gray-800/80 backdrop-blur hover:bg-gray-700"
-                            onClick={() => setShowActionsPanel(true)}
+                            className="px-3 py-1 rounded bg-gray-800/80 backdrop-blur hover:bg-gray-700 transition-colors"
+                            onClick={openActionsPanel}
                         >
                             Actions
                         </button>
@@ -911,7 +972,14 @@ export default function Reviews() {
                                 onPointerDown={(e) => handleCardPointerDown(e, c)}
                                 onMouseEnter={() => setHoveredCard({ ...c, parents })}
                                 onMouseLeave={() => setHoveredCard(null)}
-                                style={{ position: "absolute", left: px, top: py, transform: `scale(${zoom})`, transformOrigin: "top left" }}
+                                style={{
+                                    position: "absolute",
+                                    left: px,
+                                    top: py,
+                                    transform: `scale(${zoom})`,
+                                    transformOrigin: "top left",
+                                    willChange: "transform",
+                                }}
                             >
                                 <CardNode
                                     data={c}
@@ -925,24 +993,24 @@ export default function Reviews() {
 
                     {/* Zoom toolbar */}
                     <div className="absolute left-1/2 -translate-x-1/2 bottom-3 bg-gray-800/90 px-3 py-1 rounded shadow flex items-center gap-2">
-                        <button className="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600" onClick={zoomOut} aria-label="Zoom out">
+                        <button className="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600 transition-colors" onClick={zoomOut} aria-label="Zoom out">
                             -
                         </button>
                         <span className="text-xs">Zoom</span>
                         <input
                             type="range"
-                            min="0.4"
-                            max="2"
+                            min={MIN_ZOOM}
+                            max={MAX_ZOOM}
                             step="0.05"
                             value={zoom}
                             onChange={(e) => handleZoomChange(Number(e.target.value))}
                             className="mx-2 align-middle"
                         />
                         <span className="text-xs w-10 text-center">{zoom.toFixed(2)}x</span>
-                        <button className="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600" onClick={zoomIn} aria-label="Zoom in">
+                        <button className="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600 transition-colors" onClick={zoomIn} aria-label="Zoom in">
                             +
                         </button>
-                        <button className="ml-2 px-2 py-1 bg-pink-600 hover:bg-pink-500 rounded text-xs" onClick={fitToView}>
+                        <button className="ml-2 px-2 py-1 bg-pink-600 hover:bg-pink-500 rounded text-xs transition-colors" onClick={fitToView}>
                             Fit
                         </button>
                     </div>
@@ -951,13 +1019,13 @@ export default function Reviews() {
                 {/* Right Panel (desktop/tablet) */}
                 <div className="hidden md:flex md:w-56 lg:w-64 xl:w-72 bg-gray-800 p-3 flex-col">
                     <h3 className="mb-2 font-bold">Thao tác</h3>
-                    <button onClick={handleMerge} className="mb-2 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
+                    <button onClick={handleMerge} className="mb-2 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded transition-colors">
                         Ghép thẻ
                     </button>
-                    <button onClick={handleDelete} className="mb-2 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
+                    <button onClick={handleDelete} className="mb-2 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded transition-colors">
                         Xóa thẻ
                     </button>
-                    <button onClick={handleUpdate} className="mb-4 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
+                    <button onClick={handleUpdate} className="mb-4 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded transition-colors">
                         Cập nhật thẻ
                     </button>
                     <div className="flex-1"></div>
@@ -991,6 +1059,7 @@ export default function Reviews() {
                                                 width: miniw,
                                                 height: minih,
                                                 background: "#ec4899",
+                                                transition: "left 150ms ease, top 150ms ease",
                                             }}
                                         />
                                     )
@@ -1001,17 +1070,20 @@ export default function Reviews() {
                 </div>
             </div>
 
-            {/* Mobile Overlays */}
+            {/* Mobile Overlays - Cards */}
             {showCardsPanel && (
                 <div className="fixed inset-0 z-50 md:hidden">
-                    <div className="absolute inset-0 bg-black/50" onClick={() => setShowCardsPanel(false)} />
                     <div
-                        className="absolute bottom-0 left-0 right-0 bg-gray-800 rounded-t-2xl px-4 pb-4 pt-6 max-h-[80vh] overflow-y-auto"
+                        className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ${cardsPanelOpen ? "opacity-100" : "opacity-0"}`}
+                        onClick={closeCardsPanel}
+                    />
+                    <div
+                        className={`absolute bottom-0 left-0 right-0 bg-gray-800 rounded-t-2xl px-4 pb-4 pt-6 max-h-[80vh] overflow-y-auto transform transition-transform duration-200 ease-out ${cardsPanelOpen ? "translate-y-0" : "translate-y-full"}`}
                         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
                     >
                         <div className="flex items-center justify-between mb-3">
                             <h3 className="font-bold">Danh sách thẻ</h3>
-                            <button className="px-3 py-1 bg-gray-700 rounded" onClick={() => setShowCardsPanel(false)}>
+                            <button className="px-3 py-1 bg-gray-700 rounded" onClick={closeCardsPanel}>
                                 Close
                             </button>
                         </div>
@@ -1021,8 +1093,13 @@ export default function Reviews() {
                                     key={c.id}
                                     draggable={!isTouchDevice}
                                     onDragStart={(e) => !isTouchDevice && handleDragStartFromList(e, c)}
-                                    onClick={() => isTouchDevice && addCardToCanvasCenter(c)}
-                                    className="p-2 bg-gray-700 rounded hover:bg-gray-600 active:bg-gray-600"
+                                    onClick={() => {
+                                        if (isTouchDevice) {
+                                            addCardToCanvasCenter(c)
+                                            closeCardsPanel()
+                                        }
+                                    }}
+                                    className="p-2 bg-gray-700 rounded hover:bg-gray-600 active:bg-gray-600 transition-colors"
                                 >
                                     <div className="font-bold text-sm">{c.id}</div>
                                     <div className="text-xs text-gray-300">Power: {c.power}</div>
@@ -1031,10 +1108,13 @@ export default function Reviews() {
                             ))}
                         </div>
                         <div className="flex gap-2 mt-3">
-                            <button onClick={handleAddCard} className="flex-1 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
+                            <button onClick={handleAddCard} className="flex-1 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded transition-colors">
                                 + Tạo thẻ mới
                             </button>
-                            <button onClick={handleRemoveCardFromList} className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-500 rounded">
+                            <button
+                                onClick={handleRemoveCardFromList}
+                                className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-500 rounded transition-colors"
+                            >
                                 - Xóa thẻ
                             </button>
                         </div>
@@ -1042,27 +1122,31 @@ export default function Reviews() {
                 </div>
             )}
 
+            {/* Mobile Overlays - Actions */}
             {showActionsPanel && (
                 <div className="fixed inset-0 z-50 md:hidden">
-                    <div className="absolute inset-0 bg-black/50" onClick={() => setShowActionsPanel(false)} />
                     <div
-                        className="absolute bottom-0 left-0 right-0 bg-gray-800 rounded-t-2xl px-4 pb-4 pt-6 max-h-[80vh] overflow-y-auto"
+                        className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ${actionsPanelOpen ? "opacity-100" : "opacity-0"}`}
+                        onClick={closeActionsPanel}
+                    />
+                    <div
+                        className={`absolute bottom-0 left-0 right-0 bg-gray-800 rounded-t-2xl px-4 pb-4 pt-6 max-h-[80vh] overflow-y-auto transform transition-transform duration-200 ease-out ${actionsPanelOpen ? "translate-y-0" : "translate-y-full"}`}
                         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
                     >
                         <div className="flex items-center justify-between mb-3">
                             <h3 className="font-bold">Thao tác</h3>
-                            <button className="px-3 py-1 bg-gray-700 rounded" onClick={() => setShowActionsPanel(false)}>
+                            <button className="px-3 py-1 bg-gray-700 rounded" onClick={closeActionsPanel}>
                                 Close
                             </button>
                         </div>
                         <div className="flex gap-2">
-                            <button onClick={handleMerge} className="flex-1 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
+                            <button onClick={handleMerge} className="flex-1 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded transition-colors">
                                 Ghép thẻ
                             </button>
-                            <button onClick={handleDelete} className="flex-1 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
+                            <button onClick={handleDelete} className="flex-1 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded transition-colors">
                                 Xóa thẻ
                             </button>
-                            <button onClick={handleUpdate} className="flex-1 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
+                            <button onClick={handleUpdate} className="flex-1 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded transition-colors">
                                 Cập nhật
                             </button>
                         </div>
@@ -1095,6 +1179,7 @@ export default function Reviews() {
                                                     width: miniw,
                                                     height: minih,
                                                     background: "#ec4899",
+                                                    transition: "left 150ms ease, top 150ms ease",
                                                 }}
                                             />
                                         )
