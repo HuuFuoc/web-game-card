@@ -18,7 +18,8 @@ import troiImage from "../assets/troi.png";
 import nightImage from "../assets/night.png";
 
 import { FaFacebookF, FaTwitter, FaInstagram, FaDiscord } from "react-icons/fa";
-import "../Home.css"; // ✅ import file CSS đã tách
+import "../css/Home.css";
+
 
 const Home = () => {
   useEffect(() => {
