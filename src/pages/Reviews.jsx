@@ -6,388 +6,443 @@ import BgImage from "../assets/slider-bg-1.jpg"
 const cardImg = "https://upload.wikimedia.org/wikipedia/commons/3/3f/Placeholder_view_vector.svg"
 
 export default function Reviews() {
-  const CARD_W = 200
-  const CARD_H = 280
+    // Card size driven by container width (with clamp)
+    const [CARD_W, setCARD_W] = useState(200)
+    const [CARD_H, setCARD_H] = useState(280)
 
-  const initialCards = Array.from({ length: 10 }, (_, i) => ({
-    id: `Thẻ ${i + 1}`,
-    img: cardImg,
-    description: `Thẻ ${i + 1} là một thẻ bài mạnh mẽ với khả năng đặc biệt.`,
-    power: Math.floor(Math.random() * 100) + 1,
-    rarity: ["Common", "Rare", "Epic", "Legendary"][Math.floor(Math.random() * 4)],
-  }))
+    const clamp = (n, min, max) => Math.min(max, Math.max(min, n))
 
-  const [cards, setCards] = useState(initialCards)// thẻ trong danh sách thẻ
-  const [canvasCards, setCanvasCards] = useState([])// thẻ được xài trong map
-  const [selected, setSelected] = useState([])//chọn thẻ
-  const [relations, setRelations] = useState([])//mối quan hệ thẻ
-  const [uniqueCounter, setUniqueCounter] = useState(1)//tạo id mới cho thẻ khi có 2 thẻ trùng
-  const [zoom, setZoom] = useState(1)//phóng to thu nhỏ map
-  const [pan, setPan] = useState({ x: 0, y: 0 })// di chuyển map
-  const [hoveredCard, setHoveredCard] = useState(null)// trỏ chuột hiển thị thông tin---chưa có
+    const isTouchDevice =
+        typeof window !== "undefined" &&
+        ("ontouchstart" in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0)
 
-  const containerRef = useRef(null)
-  const isPanningRef = useRef(false)
-  const panStartRef = useRef({ mouseX: 0, mouseY: 0, panX: 0, panY: 0 })// lưu tọa độ
-  const minimapRef = useRef(null)
-  const MINIMAP_SIZE = 200// kích thức minimap 
+    const initialCards = Array.from({ length: 10 }, (_, i) => ({
+        id: `Thẻ ${i + 1}`,
+        img: cardImg,
+        description: `Thẻ ${i + 1} là một thẻ bài mạnh mẽ với khả năng đặc biệt.`,
+        power: Math.floor(Math.random() * 100) + 1,
+        rarity: ["Common", "Rare", "Epic", "Legendary"][Math.floor(Math.random() * 4)],
+    }))
 
-  function CardNode({ data, selected: isSelected, position, uniqueKey }) {
-    const [hovered, setHovered] = useState(false)
+    const [cards, setCards] = useState(initialCards)
+    const [canvasCards, setCanvasCards] = useState([])
+    const [selected, setSelected] = useState([])
+    const [relations, setRelations] = useState([])
+    const [uniqueCounter, setUniqueCounter] = useState(1)
+    const [zoom, setZoom] = useState(1)
+    const [pan, setPan] = useState({ x: 0, y: 0 })
+    const [hoveredCard, setHoveredCard] = useState(null)
 
-    return (
-      <div
-            style={{
-                width: CARD_W,
-                height: CARD_H,
-                background: isSelected
-                    ? "linear-gradient(135deg, #DC2626, #B91C1C)"
-                    : "linear-gradient(135deg, #FCA5A5, #F87171)",
-                border: isSelected ? "4px solid #7F1D1D" : "4px solid #B91C1C",
-                borderRadius: 12,
-                boxShadow: isSelected
-                    ? "0 12px 30px rgba(127, 29, 29, 0.6), 0 0 0 2px #FEF3C7"
-                    : "0 8px 20px rgba(185, 28, 28, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                color: "#1F2937",
-                fontWeight: "bold",
-                cursor: "pointer",
-                position: "relative",
-                overflow: "visible", // <-- change from "hidden" to "visible"
-                fontFamily: "serif",
-                transform: isSelected ? "scale(1.05)" : "scale(1)",
-                transition: "all 0.3s ease",
-                paddingTop: 24, // <-- add this line
-            }}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
-        >
-            {data.isFusion && (
-                <svg
-                    width="32"
-                    height="24"
+    // Mobile overlays
+    const [showCardsPanel, setShowCardsPanel] = useState(false)
+    const [showActionsPanel, setShowActionsPanel] = useState(false)
+
+    const containerRef = useRef(null)
+    const isPanningRef = useRef(false)
+    const panStartRef = useRef({ mouseX: 0, mouseY: 0, panX: 0, panY: 0 })
+    const minimapRef = useRef(null)
+    const MINIMAP_SIZE = 200
+
+    // ResizeObserver to scale cards based on available canvas width
+    useEffect(() => {
+        const el = containerRef.current
+        if (!el) return
+        const ro = new ResizeObserver((entries) => {
+            const { width: w } = entries[0].contentRect
+            // Target ~3.6 cards per row on small screens; clamp for readability
+            const targetW = clamp(Math.round(w / 3.6), 140, 220)
+            const targetH = Math.round(targetW * 1.35)
+            setCARD_W(targetW)
+            setCARD_H(targetH)
+        })
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [])
+
+    function CardNode({ data, selected: isSelected, position, uniqueKey }) {
+        const [hovered, setHovered] = useState(false)
+        const small = CARD_W <= 160
+        const BASE_W = 200
+        const BASE_H = 280
+        const cardScale = CARD_W / BASE_W
+
+        return (
+            <div
+                style={{
+                    width: BASE_W,
+                    height: BASE_H,
+                    background: isSelected
+                        ? "linear-gradient(135deg, #DC2626, #B91C1C)"
+                        : "linear-gradient(135deg, #FCA5A5, #F87171)",
+                    border: isSelected ? "4px solid #7F1D1D" : "4px solid #B91C1C",
+                    borderRadius: 12,
+                    boxShadow: small
+                        ? "0 4px 10px rgba(185, 28, 28, 0.35)"
+                        : isSelected
+                            ? "0 12px 30px rgba(127, 29, 29, 0.6), 0 0 0 2px #FEF3C7"
+                            : "0 8px 20px rgba(185, 28, 28, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "flex-start",
+                    color: "#1F2937",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    position: "relative",
+                    overflow: "visible",
+                    fontFamily: "serif",
+                    transform: `scale(${cardScale * (isSelected ? 1.05 : 1)})`,
+                    transformOrigin: "top left",
+                    transition: "all 0.25s ease",
+                    paddingTop: 24,
+                }}
+                onMouseEnter={() => setHovered(true)}
+                onMouseLeave={() => setHovered(false)}
+            >
+                {data.isFusion && (
+                    <svg
+                        width="32"
+                        height="24"
+                        style={{
+                            position: "absolute",
+                            top: -24,
+                            left: "50%",
+                            transform: "translateX(-50%) rotate(180deg)",
+                            zIndex: 30,
+                            pointerEvents: "none",
+                        }}
+                        viewBox="0 0 32 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <polygon points="16,0 32,20 0,20" fill="#111" />
+                        <rect x="12" y="20" width="8" height="4" fill="#111" />
+                    </svg>
+                )}
+
+                {/* Top node */}
+                <div
                     style={{
                         position: "absolute",
-                        top: -24, // <-- change from -24 to 0
+                        top: -8,
                         left: "50%",
-                        transform: "translateX(-50%) rotate(180deg)" ,
-                        zIndex: 30,
+                        transform: "translateX(-50%)",
+                        width: 16,
+                        height: 16,
+                        borderRadius: "50%",
+                        background: isSelected ? "#FEF3C7" : "#DC2626",
+                        border: "2px solid #fff",
+                        cursor: "pointer",
+                        zIndex: 20,
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                    }}
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        console.log(" Top connection node ", uniqueKey)
+                    }}
+                />
+
+                {/* Bottom node */}
+                <div
+                    style={{
+                        position: "absolute",
+                        bottom: -8,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        width: 16,
+                        height: 16,
+                        borderRadius: "50%",
+                        background: isSelected ? "#FEF3C7" : "#DC2626",
+                        border: "2px solid #fff",
+                        cursor: "pointer",
+                        zIndex: 20,
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                    }}
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        console.log(" Bottom connection node ", uniqueKey)
+                    }}
+                />
+
+                {/* Cost circle */}
+                <div
+                    style={{
+                        position: "absolute",
+                        top: 12,
+                        left: 12,
+                        width: 32,
+                        height: 32,
+                        borderRadius: "50%",
+                        background: isSelected
+                            ? "linear-gradient(135deg, #FEF3C7, #FDE68A)"
+                            : "linear-gradient(135deg, #DC2626, #B91C1C)",
+                        border: isSelected ? "3px solid #F59E0B" : "3px solid #7F1D1D",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: isSelected ? "#92400E" : "#FEF3C7",
+                        fontSize: 14,
+                        fontWeight: "bold",
+                        zIndex: 10,
+                        boxShadow: isSelected ? "0 2px 8px rgba(245, 158, 11, 0.4)" : "0 2px 8px rgba(127, 29, 29, 0.4)",
+                    }}
+                >
+                    {data.power || "--"}
+                </div>
+
+                {/* Header */}
+                <div
+                    style={{
+                        width: "calc(100% - 16px)",
+                        margin: "8px 8px 0 8px",
+                        background: isSelected
+                            ? "linear-gradient(135deg, #FEF3C7, #FDE68A)"
+                            : "linear-gradient(135deg, #FEE2E2, #FECACA)",
+                        color: isSelected ? "#92400E" : "#1F2937",
+                        padding: "12px 16px",
+                        fontSize: 16,
+                        textAlign: "center",
+                        borderRadius: "8px 8px 0 0",
+                        fontWeight: "bold",
+                        textShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                        border: isSelected ? "2px solid #F59E0B" : "2px solid #B91C1C",
+                        borderBottom: "none",
+                        position: "relative",
+                    }}
+                >
+                    {data.label || data.id}
+                </div>
+
+                {/* Image */}
+                <img
+                    src={data.img || "/placeholder.svg?height=120&width=184"}
+                    alt={data.label || data.id}
+                    style={{
+                        width: "calc(100% - 16px)",
+                        height: 100,
+                        objectFit: "cover",
+                        border: isSelected ? "2px solid #F59E0B" : "2px solid #B91C1C",
+                        borderTop: "none",
+                        borderBottom: "none",
+                        background: "linear-gradient(135deg, #F3F4F6, #E5E7EB)",
+                        margin: "0 8px",
                         pointerEvents: "none",
                     }}
-                    viewBox="0 0 32 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
+                />
+
+                {/* Content */}
+                <div
+                    style={{
+                        flex: 1,
+                        width: "calc(100% - 16px)",
+                        margin: "0 8px 8px 8px",
+                        background: isSelected
+                            ? "linear-gradient(135deg, #FEF3C7, #FDE68A)"
+                            : "linear-gradient(135deg, #FEE2E2, #FECACA)",
+                        padding: "12px",
+                        fontSize: 11,
+                        fontWeight: "normal",
+                        color: isSelected ? "#92400E" : "#1F2937",
+                        textAlign: "left",
+                        lineHeight: 1.4,
+                        border: isSelected ? "2px solid #F59E0B" : "2px solid #B91C1C",
+                        borderTop: "none",
+                        borderRadius: "0 0 8px 8px",
+                        position: "relative",
+                    }}
                 >
-                    <polygon points="16,0 32,20 0,20" fill="#111" />
-                    <rect x="12" y="20" width="8" height="4" fill="#111" />
-                </svg>
-            )}
-        {/* Top connection node */}
-        <div
-          style={{
-            position: "absolute",
-            top: -8,
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: 16,
-            height: 16,
-            borderRadius: "50%",
-            background: isSelected ? "#FEF3C7" : "#DC2626",
-            border: "2px solid #fff",
-            cursor: "pointer",
-            zIndex: 20,
-            boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-          }}
-          onClick={(e) => {
-            e.stopPropagation()
-            // Handle connection logic here
-            console.log(" Top connection node ", uniqueKey)
-          }}
-        />
+                    <div style={{ fontWeight: "bold", color: isSelected ? "#D97706" : "#DC2626", marginBottom: 6, fontSize: 13 }}>
+                        {data.title || data.label || data.id}
+                    </div>
+                    <div style={{ color: isSelected ? "#92400E" : "#374151", fontSize: 10, lineHeight: 1.3 }}>
+                        {data.description || "Một thẻ bài mạnh mẽ với khả năng đặc biệt trong trận chiến."}
+                    </div>
+                </div>
 
-        {/* Bottom connection node */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: -8,
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: 16,
-            height: 16,
-            borderRadius: "50%",
-            background: isSelected ? "#FEF3C7" : "#DC2626",
-            border: "2px solid #fff",
-            cursor: "pointer",
-            zIndex: 20,
-            boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-          }}
-          onClick={(e) => {
-            e.stopPropagation()
-            // Handle connection logic here
-            console.log(" Bottom connection node ", uniqueKey)
-          }}
-        />
+                {/* Bottom right diamond */}
+                <div
+                    style={{
+                        position: "absolute",
+                        bottom: 8,
+                        right: 8,
+                        width: 32,
+                        height: 32,
+                        background: isSelected
+                            ? "linear-gradient(135deg, #FEF3C7, #FDE68A)"
+                            : "linear-gradient(135deg, #DC2626, #B91C1C)",
+                        border: isSelected ? "2px solid #F59E0B" : "2px solid #7F1D1D",
+                        transform: "rotate(45deg)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: isSelected ? "#92400E" : "#FEF3C7",
+                        fontSize: 12,
+                        fontWeight: "bold",
+                        zIndex: 10,
+                        boxShadow: isSelected ? "0 2px 6px rgba(245, 158, 11, 0.3)" : "0 2px 6px rgba(127, 29, 29, 0.3)",
+                    }}
+                >
+                    <span style={{ transform: "rotate(-45deg)" }}>{data.rarity?.[0] || "?"}</span>
+                </div>
 
-        {/* Cost circle */}
-        <div
-          style={{
-            position: "absolute",
-            top: 12,
-            left: 12,
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            background: isSelected
-              ? "linear-gradient(135deg, #FEF3C7, #FDE68A)"
-              : "linear-gradient(135deg, #DC2626, #B91C1C)",
-            border: isSelected ? "3px solid #F59E0B" : "3px solid #7F1D1D",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: isSelected ? "#92400E" : "#FEF3C7",
-            fontSize: 14,
-            fontWeight: "bold",
-            zIndex: 10,
-            boxShadow: isSelected ? "0 2px 8px rgba(245, 158, 11, 0.4)" : "0 2px 8px rgba(127, 29, 29, 0.4)",
-          }}
-        >
-          {data.power || "--"}
-        </div>
-
-        {/* Header */}
-        <div
-          style={{
-            width: "calc(100% - 16px)",
-            margin: "8px 8px 0 8px",
-            marginTop: "8px",
-            background: isSelected
-              ? "linear-gradient(135deg, #FEF3C7, #FDE68A)"
-              : "linear-gradient(135deg, #FEE2E2, #FECACA)",
-            color: isSelected ? "#92400E" : "#1F2937",
-            padding: "12px 16px",
-            fontSize: 16,
-            textAlign: "center",
-            borderRadius: "8px 8px 0 0",
-            fontWeight: "bold",
-            textShadow: "0 1px 2px rgba(0,0,0,0.1)",
-            border: isSelected ? "2px solid #F59E0B" : "2px solid #B91C1C",
-            borderBottom: "none",
-            position: "relative",
-          }}
-        >
-          {data.label || data.id}
-        </div>
-
-        {/* Image */}
-        <img
-          src={data.img || "/placeholder.svg?height=120&width=184"}
-          alt={data.label || data.id}
-          style={{
-            width: "calc(100% - 16px)",
-            height: 100,
-            objectFit: "cover",
-            border: isSelected ? "2px solid #F59E0B" : "2px solid #B91C1C",
-            borderTop: "none",
-            borderBottom: "none",
-            background: "linear-gradient(135deg, #F3F4F6, #E5E7EB)",
-            margin: "0 8px",
-            pointerEvents: "none",
-          }}
-        />
-
-        {/* Content */}
-        <div
-          style={{
-            flex: 1,
-            width: "calc(100% - 16px)",
-            margin: "0 8px 8px 8px",
-            background: isSelected
-              ? "linear-gradient(135deg, #FEF3C7, #FDE68A)"
-              : "linear-gradient(135deg, #FEE2E2, #FECACA)",
-            padding: "12px",
-            fontSize: 11,
-            fontWeight: "normal",
-            color: isSelected ? "#92400E" : "#1F2937",
-            textAlign: "left",
-            lineHeight: 1.4,
-            border: isSelected ? "2px solid #F59E0B" : "2px solid #B91C1C",
-            borderTop: "none",
-            borderRadius: "0 0 8px 8px",
-            position: "relative",
-          }}
-        >
-          <div style={{ fontWeight: "bold", color: isSelected ? "#D97706" : "#DC2626", marginBottom: 6, fontSize: 13 }}>
-            {data.title || data.label || data.id}
-          </div>
-          <div style={{ color: isSelected ? "#92400E" : "#374151", fontSize: 10, lineHeight: 1.3 }}>
-            {data.description || "Một thẻ bài mạnh mẽ với khả năng đặc biệt trong trận chiến."}
-          </div>
-        </div>
-
-        {/* Bottom right diamond */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: 8,
-            right: 8,
-            width: 32,
-            height: 32,
-            background: isSelected
-              ? "linear-gradient(135deg, #FEF3C7, #FDE68A)"
-              : "linear-gradient(135deg, #DC2626, #B91C1C)",
-            border: isSelected ? "2px solid #F59E0B" : "2px solid #7F1D1D",
-            transform: "rotate(45deg)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: isSelected ? "#92400E" : "#FEF3C7",
-            fontSize: 12,
-            fontWeight: "bold",
-            zIndex: 10,
-            boxShadow: isSelected ? "0 2px 6px rgba(245, 158, 11, 0.3)" : "0 2px 6px rgba(127, 29, 29, 0.3)",
-          }}
-        >
-          <span style={{ transform: "rotate(-45deg)" }}>{data.rarity?.[0] || "?"}</span>
-        </div>
-
-        {/* Tooltip */}
-        {hovered && (
-          <div
-            style={{
-              position: "absolute",
-              top: -100,
-              left: "100%",
-              marginLeft: 12,
-              background: "linear-gradient(135deg, #1F2937, #374151)",
-              color: "#F9FAFB",
-              padding: "12px 16px",
-              borderRadius: 8,
-              boxShadow: "0 8px 25px rgba(31, 41, 55, 0.4)",
-              whiteSpace: "normal",
-              zIndex: 100,
-              pointerEvents: "none",
-              minWidth: 180,
-              fontWeight: "normal",
-              fontSize: 12,
-              lineHeight: 1.4,
-              border: isSelected ? "2px solid #F59E0B" : "2px solid #DC2626",
-            }}
-          >
-            <div>
-              <strong style={{ color: "#FEF3C7" }}>Name:</strong> {data.label || data.id}
+                {/* Tooltip (hidden on touch to avoid overlap) */}
+                {!isTouchDevice && hovered && (
+                    <div
+                        style={{
+                            position: "absolute",
+                            top: -100,
+                            left: "100%",
+                            marginLeft: 12,
+                            background: "linear-gradient(135deg, #1F2937, #374151)",
+                            color: "#F9FAFB",
+                            padding: "12px 16px",
+                            borderRadius: 8,
+                            boxShadow: "0 8px 25px rgba(31, 41, 55, 0.4)",
+                            whiteSpace: "normal",
+                            zIndex: 100,
+                            pointerEvents: "none",
+                            minWidth: 180,
+                            fontWeight: "normal",
+                            fontSize: 12,
+                            lineHeight: 1.4,
+                            border: isSelected ? "2px solid #F59E0B" : "2px solid #DC2626",
+                        }}
+                    >
+                        <div>
+                            <strong style={{ color: "#FEF3C7" }}>Name:</strong> {data.label || data.id}
+                        </div>
+                        <div>
+                            <strong style={{ color: "#FEF3C7" }}>Description:</strong> {data.description || "No description"}
+                        </div>
+                        <div>
+                            <strong style={{ color: "#FEF3C7" }}>Power:</strong> {data.power ?? "?"}
+                        </div>
+                        <div>
+                            <strong style={{ color: "#FEF3C7" }}>Rarity:</strong> {data.rarity || "Unknown"}
+                        </div>
+                    </div>
+                )}
             </div>
-            <div>
-              <strong style={{ color: "#FEF3C7" }}>Description:</strong> {data.description || "No description"}
-            </div>
-            <div>
-              <strong style={{ color: "#FEF3C7" }}>Power:</strong> {data.power ?? "?"}
-            </div>
-            <div>
-              <strong style={{ color: "#FEF3C7" }}>Rarity:</strong> {data.rarity || "Unknown"}
-            </div>
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  //const isValidCardName = (name) => {
-  //  if (!name) return false
-  //  const regex = /^thẻ\s+\d+\/?\d*$/i
-  //  return regex.test(name.trim())
-  //}
-
-  const handleDragStartFromList = (e, card) => {
-    e.dataTransfer.setData("card", JSON.stringify(card))
-    e.dataTransfer.effectAllowed = "copy"
-  }
-
-  const handleDropToCanvas = (e) => {
-    e.preventDefault()
-    const data = e.dataTransfer.getData("card")
-    if (!data) return
-    const card = JSON.parse(data)
-
-    const rect = containerRef.current.getBoundingClientRect()
-    const pixelX = e.clientX - rect.left
-    const pixelY = e.clientY - rect.top
-
-    const mapX = (pixelX - pan.x) / zoom - CARD_W / 2
-    const mapY = (pixelY - pan.y) / zoom - CARD_H / 2
-
-    const ukey = `${card.id}-${uniqueCounter}`
-    setUniqueCounter((c) => c + 1)
-
-    setCanvasCards((prev) => [...prev, { ...card, uniqueKey: ukey, x: mapX, y: mapY }])
-  }
-
-  const handleCanvasMouseDown = (e) => {
-    if (e.target !== containerRef.current) return
-    isPanningRef.current = true
-    panStartRef.current = {
-      mouseX: e.clientX,
-      mouseY: e.clientY,
-      panX: pan.x,
-      panY: pan.y,
+        )
     }
 
-    const onMouseMove = (ev) => {
-      if (!isPanningRef.current) return
-      const dx = ev.clientX - panStartRef.current.mouseX
-      const dy = ev.clientY - panStartRef.current.mouseY
-      setPan({
-        x: panStartRef.current.panX + dx,
-        y: panStartRef.current.panY + dy,
-      })
+    const handleDragStartFromList = (e, card) => {
+        e.dataTransfer.setData("card", JSON.stringify(card))
+        e.dataTransfer.effectAllowed = "copy"
     }
 
-    const onMouseUp = () => {
-      isPanningRef.current = false
-      document.removeEventListener("mousemove", onMouseMove)
-      document.removeEventListener("mouseup", onMouseUp)
+    const addCardToCanvasCenter = (card) => {
+        const rect = containerRef.current.getBoundingClientRect()
+        const mapX = (rect.width / 2 - pan.x) / zoom - CARD_W / 2
+        const mapY = (rect.height / 2 - pan.y) / zoom - CARD_H / 2
+        const ukey = `${card.id}-${uniqueCounter}`
+        setUniqueCounter((c) => c + 1)
+        setCanvasCards((prev) => [...prev, { ...card, uniqueKey: ukey, x: mapX, y: mapY }])
     }
 
-    document.addEventListener("mousemove", onMouseMove)
-    document.addEventListener("mouseup", onMouseUp)
-  }
+    const handleDropToCanvas = (e) => {
+        e.preventDefault()
+        const data = e.dataTransfer.getData("card")
+        if (!data) return
+        const card = JSON.parse(data)
 
-  const handleDragCanvasCard = (e, uniqueKey) => {
-    e.stopPropagation()
-    const card = canvasCards.find((c) => c.uniqueKey === uniqueKey)
-    if (!card) return
+        const rect = containerRef.current.getBoundingClientRect()
+        const pixelX = e.clientX - rect.left
+        const pixelY = e.clientY - rect.top
 
-    const startMouseX = e.clientX
-    const startMouseY = e.clientY
-    const startMapX = card.x
-    const startMapY = card.y
+        const mapX = (pixelX - pan.x) / zoom - CARD_W / 2
+        const mapY = (pixelY - pan.y) / zoom - CARD_H / 2
 
-    const onMouseMove = (ev) => {
-      const dxMap = (ev.clientX - startMouseX) / zoom
-      const dyMap = (ev.clientY - startMouseY) / zoom
+        const ukey = `${card.id}-${uniqueCounter}`
+        setUniqueCounter((c) => c + 1)
 
-      setCanvasCards((prev) =>
-        prev.map((c) => (c.uniqueKey === uniqueKey ? { ...c, x: startMapX + dxMap, y: startMapY + dyMap } : c)),
-      )
+        setCanvasCards((prev) => [...prev, { ...card, uniqueKey: ukey, x: mapX, y: mapY }])
     }
 
-    const onMouseUp = () => {
-      document.removeEventListener("mousemove", onMouseMove)
-      document.removeEventListener("mouseup", onMouseUp)
+    // Pan the canvas (mouse/pointer)
+    const handleCanvasMouseDown = (e) => {
+        if (e.target !== containerRef.current) return
+        isPanningRef.current = true
+        panStartRef.current = {
+            mouseX: e.clientX,
+            mouseY: e.clientY,
+            panX: pan.x,
+            panY: pan.y,
+        }
+
+        const onMouseMove = (ev) => {
+            if (!isPanningRef.current) return
+            const dx = ev.clientX - panStartRef.current.mouseX
+            const dy = ev.clientY - panStartRef.current.mouseY
+            setPan({
+                x: panStartRef.current.panX + dx,
+                y: panStartRef.current.panY + dy,
+            })
+        }
+
+        const onMouseUp = () => {
+            isPanningRef.current = false
+            document.removeEventListener("mousemove", onMouseMove)
+            document.removeEventListener("mouseup", onMouseUp)
+        }
+
+        document.addEventListener("mousemove", onMouseMove)
+        document.addEventListener("mouseup", onMouseUp)
     }
 
-    document.addEventListener("mousemove", onMouseMove)
-    document.addEventListener("mouseup", onMouseUp)
-  }
+    // Pointer-based drag for cards (touch + mouse)
+    const handleCardPointerDown = (e, card) => {
+        e.preventDefault()
+        e.stopPropagation()
 
-  const toggleSelectUnique = (e, uniqueKey) => {
-    e.stopPropagation()
-    setSelected((prev) =>
-      prev.includes(uniqueKey) ? prev.filter((k) => k !== uniqueKey) : [...prev, uniqueKey].slice(-2),
-    )
-  }
+        const pointerId = e.pointerId
+        const startX = e.clientX
+        const startY = e.clientY
+        const startMapX = card.x
+        const startMapY = card.y
+        let moved = false
+        const DRAG_THRESHOLD = 5
+
+        const target = e.currentTarget
+        if (target.setPointerCapture) target.setPointerCapture(pointerId)
+
+        const onMove = (ev) => {
+            if (ev.pointerId !== pointerId) return
+            const dx = ev.clientX - startX
+            const dy = ev.clientY - startY
+            if (!moved && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
+                moved = true
+            }
+            if (moved) {
+                const dxMap = dx / zoom
+                const dyMap = dy / zoom
+                setCanvasCards((prev) =>
+                    prev.map((pc) => (pc.uniqueKey === card.uniqueKey ? { ...pc, x: startMapX + dxMap, y: startMapY + dyMap } : pc)),
+                )
+            }
+        }
+
+        const onUp = (ev) => {
+            if (ev.pointerId !== pointerId) return
+            window.removeEventListener("pointermove", onMove)
+            window.removeEventListener("pointerup", onUp)
+            window.removeEventListener("pointercancel", onUp)
+            if (!moved) {
+                toggleSelectUnique(ev, card.uniqueKey)
+            }
+        }
+
+        window.addEventListener("pointermove", onMove, { passive: true })
+        window.addEventListener("pointerup", onUp, { passive: true })
+        window.addEventListener("pointercancel", onUp, { passive: true })
+    }
+
+    const toggleSelectUnique = (e, uniqueKey) => {
+        e.stopPropagation()
+        setSelected((prev) =>
+            prev.includes(uniqueKey) ? prev.filter((k) => k !== uniqueKey) : [...prev, uniqueKey].slice(-2),
+        )
+    }
 
     const handleMerge = () => {
         if (selected.length !== 2) return alert("Chọn đúng 2 thẻ để ghép")
@@ -403,22 +458,21 @@ export default function Reviews() {
         const ukey = `new-${uniqueCounter}`
         setUniqueCounter((c) => c + 1)
 
-        // Find previous fusion cards created from the same pair (order doesn't matter)
         const pairKeys = [...selected].sort().join("|")
-        const previousFusions = canvasCards.filter(c =>
-            c.isFusion &&
-            c.description &&
-            (() => {
-                const parents = relations
-                    .filter(r => r.toKey === c.uniqueKey)
-                    .map(r => r.fromKey)
-                    .sort()
-                    .join("|")
-                return parents === pairKeys
-            })()
+        const previousFusions = canvasCards.filter(
+            (c) =>
+                c.isFusion &&
+                c.description &&
+                (() => {
+                    const parents = relations
+                        .filter((r) => r.toKey === c.uniqueKey)
+                        .map((r) => r.fromKey)
+                        .sort()
+                        .join("|")
+                    return parents === pairKeys
+                })(),
         )
 
-        // Always apply vertical margin, even for the first fusion
         const verticalMargin = 40
         let mapX, mapY
         if (previousFusions.length > 0) {
@@ -468,125 +522,228 @@ export default function Reviews() {
         setSelected([])
     }
 
-  const handleDelete = () => {
-    if (selected.length < 1) return alert("Chọn ít nhất 1 thẻ để xóa")
-    setCanvasCards((prev) => prev.filter((c) => !selected.includes(c.uniqueKey)))
-    setRelations((prev) => prev.filter((r) => !selected.includes(r.fromKey) && !selected.includes(r.toKey)))
-    setSelected([])
-  }
+    const handleDelete = () => {
+        if (selected.length < 1) return alert("Chọn ít nhất 1 thẻ để xóa")
+        setCanvasCards((prev) => prev.filter((c) => !selected.includes(c.uniqueKey)))
+        setRelations((prev) => prev.filter((r) => !selected.includes(r.fromKey) && !selected.includes(r.toKey)))
+        setSelected([])
+    }
 
-  const handleUpdate = () => {
-    if (selected.length !== 1) return alert("Chọn đúng 1 thẻ để cập nhật")
-    const uniqueKey = selected[0]
-    const instance = canvasCards.find((c) => c.uniqueKey === uniqueKey)
-    if (!instance) return
+    const handleUpdate = () => {
+        if (selected.length !== 1) return alert("Chọn đúng 1 thẻ để cập nhật")
+        const uniqueKey = selected[0]
+        const instance = canvasCards.find((c) => c.uniqueKey === uniqueKey)
+        if (!instance) return
 
-      const oldId = instance.id
-      const name = prompt("Nhập tên mới (vd: Thẻ 12):")
-      // Removed name validation
-      // if (!name || !isValidCardName(name)) return alert("Tên không hợp lệ")
-      if (!name) return alert("Tên không hợp lệ")
-      if (cards.some((c) => c.id.toLowerCase() === name.trim().toLowerCase())) {
-          return alert("Tên thẻ đã tồn tại trong danh sách")
-      }
-
-    setCanvasCards((prev) => prev.map((c) => (c.id === oldId ? { ...c, id: name.trim() } : c)))
-    setCards((prev) => prev.map((c) => (c.id === oldId ? { ...c, id: name.trim() } : c)))
-    setSelected([])
-  }
-
-    const handleAddCard = () => {
-        const name = prompt("Nhập tên thẻ mới (vd: Thẻ 20):")
-        // Removed name validation
-        // if (!name || !isValidCardName(name)) return alert("Tên không hợp lệ")
+        const oldId = instance.id
+        const name = prompt("Nhập tên mới (vd: Thẻ 12):")
         if (!name) return alert("Tên không hợp lệ")
         if (cards.some((c) => c.id.toLowerCase() === name.trim().toLowerCase())) {
             return alert("Tên thẻ đã tồn tại trong danh sách")
         }
-    setCards((prev) => [
-      ...prev,
-      {
-        id: name.trim(),
-        img: cardImg,
-        description: `${name.trim()} là một thẻ bài mới được tạo.`,
-        power: Math.floor(Math.random() * 100) + 1,
-        rarity: "Common",
-      },
-    ])
-  }
 
-  const handleRemoveCardFromList = () => {
-    const name = prompt("Nhập tên thẻ muốn xóa (vd: Thẻ 5):")
-    if (!name) return
-    setCards((prev) => prev.filter((c) => c.id.toLowerCase() !== name.trim().toLowerCase()))
-    setCanvasCards((prev) => prev.filter((c) => c.id.toLowerCase() !== name.trim().toLowerCase()))
-    setRelations((prev) =>
-      prev.filter(
-        (r) =>
-          !canvasCards.find((c) => c.id.toLowerCase() === name.trim().toLowerCase() && c.uniqueKey === r.fromKey) &&
-          !canvasCards.find((c) => c.id.toLowerCase() === name.trim().toLowerCase() && c.uniqueKey === r.toKey),
-      ),
-    )
-  }
-
-  const handleZoomChange = (newZoom) => {
-    const rect = containerRef.current.getBoundingClientRect()
-    const centerPixelX = rect.width / 2
-    const centerPixelY = rect.height / 2
-    const centerMapX = (centerPixelX - pan.x) / zoom
-    const centerMapY = (centerPixelY - pan.y) / zoom
-
-    const newPanX = centerPixelX - centerMapX * newZoom
-    const newPanY = centerPixelY - centerMapY * newZoom
-
-    setZoom(newZoom)
-    setPan({ x: newPanX, y: newPanY })
-  }
-
-  const handleMinimapClick = (e) => {
-    const rect = containerRef.current.getBoundingClientRect()
-    const worldWidth = rect.width * zoom
-    const worldHeight = rect.height * zoom
-
-    const minimapRect = minimapRef.current.getBoundingClientRect()
-    const clickX = e.clientX - minimapRect.left
-    const clickY = e.clientY - minimapRect.top
-
-    const normalizedX = clickX / MINIMAP_SIZE
-    const normalizedY = clickY / MINIMAP_SIZE
-
-    const desiredWorldX = normalizedX * worldWidth
-    const desiredWorldY = normalizedY * worldHeight
-
-    const newPanX = rect.width / 2 - desiredWorldX
-    const newPanY = rect.height / 2 - desiredWorldY
-    setPan({ x: newPanX, y: newPanY })
-  }
-
-  const instancePixelPos = (c) => {
-    return {
-      px: c.x * zoom + pan.x,
-      py: c.y * zoom + pan.y,
-      w: CARD_W * zoom,
-      h: CARD_H * zoom,
+        setCanvasCards((prev) => prev.map((c) => (c.id === oldId ? { ...c, id: name.trim() } : c)))
+        setCards((prev) => prev.map((c) => (c.id === oldId ? { ...c, id: name.trim() } : c)))
+        setSelected([])
     }
-  }
+
+    const handleAddCard = () => {
+        const name = prompt("Nhập tên thẻ mới (vd: Thẻ 20):")
+        if (!name) return alert("Tên không hợp lệ")
+        if (cards.some((c) => c.id.toLowerCase() === name.trim().toLowerCase())) {
+            return alert("Tên thẻ đã tồn tại trong danh sách")
+        }
+        setCards((prev) => [
+            ...prev,
+            {
+                id: name.trim(),
+                img: cardImg,
+                description: `${name.trim()} là một thẻ bài mới được tạo.`,
+                power: Math.floor(Math.random() * 100) + 1,
+                rarity: "Common",
+            },
+        ])
+    }
+
+    const handleRemoveCardFromList = () => {
+        const name = prompt("Nhập tên thẻ muốn xóa (vd: Thẻ 5):")
+        if (!name) return
+        setCards((prev) => prev.filter((c) => c.id.toLowerCase() !== name.trim().toLowerCase()))
+        setCanvasCards((prev) => prev.filter((c) => c.id.toLowerCase() !== name.trim().toLowerCase()))
+        setRelations((prev) =>
+            prev.filter(
+                (r) =>
+                    !canvasCards.find((c) => c.id.toLowerCase() === name.trim().toLowerCase() && c.uniqueKey === r.fromKey) &&
+                    !canvasCards.find((c) => c.id.toLowerCase() === name.trim().toLowerCase() && c.uniqueKey === r.toKey),
+            ),
+        )
+    }
+
+    const handleZoomChange = (newZoom) => {
+        const rect = containerRef.current.getBoundingClientRect()
+        const centerPixelX = rect.width / 2
+        const centerPixelY = rect.height / 2
+        const centerMapX = (centerPixelX - pan.x) / zoom
+        const centerMapY = (centerPixelY - pan.y) / zoom
+
+        const newPanX = centerPixelX - centerMapX * newZoom
+        const newPanY = centerPixelY - centerMapY * newZoom
+
+        setZoom(newZoom)
+        setPan({ x: newPanX, y: newPanY })
+    }
+
+    const zoomIn = () => handleZoomChange(clamp(zoom + 0.12, 0.4, 2))
+    const zoomOut = () => handleZoomChange(clamp(zoom - 0.12, 0.4, 2))
+
+    const fitToView = () => {
+        if (canvasCards.length === 0) return
+        const rect = containerRef.current.getBoundingClientRect()
+        const padding = 40
+
+        let minX = Infinity,
+            minY = Infinity,
+            maxX = -Infinity,
+            maxY = -Infinity
+        canvasCards.forEach((c) => {
+            minX = Math.min(minX, c.x)
+            minY = Math.min(minY, c.y)
+            maxX = Math.max(maxX, c.x + CARD_W)
+            maxY = Math.max(maxY, c.y + CARD_H)
+        })
+        const bbW = maxX - minX
+        const bbH = maxY - minY
+
+        const scaleX = rect.width / (bbW + padding * 2)
+        const scaleY = rect.height / (bbH + padding * 2)
+        const newZoom = clamp(Math.min(scaleX, scaleY), 0.4, 2)
+
+        const worldCx = minX + bbW / 2
+        const worldCy = minY + bbH / 2
+        const newPanX = rect.width / 2 - worldCx * newZoom
+        const newPanY = rect.height / 2 - worldCy * newZoom
+
+        setZoom(newZoom)
+        setPan({ x: newPanX, y: newPanY })
+    }
+
+    const handleMinimapClick = (e) => {
+        const rect = containerRef.current.getBoundingClientRect()
+        const worldWidth = rect.width * zoom
+        const worldHeight = rect.height * zoom
+
+        const minimapRect = minimapRef.current.getBoundingClientRect()
+        const clickX = e.clientX - minimapRect.left
+        const clickY = e.clientY - minimapRect.top
+
+        const normalizedX = clickX / MINIMAP_SIZE
+        const normalizedY = clickY / MINIMAP_SIZE
+
+        const desiredWorldX = normalizedX * worldWidth
+        const desiredWorldY = normalizedY * worldHeight
+
+        const newPanX = rect.width / 2 - desiredWorldX
+        const newPanY = rect.height / 2 - desiredWorldY
+        setPan({ x: newPanX, y: newPanY })
+    }
+
+    const instancePixelPos = (c) => {
+        return {
+            px: c.x * zoom + pan.x,
+            py: c.y * zoom + pan.y,
+            w: CARD_W * zoom,
+            h: CARD_H * zoom,
+        }
+    }
+
+    // Touch support for panning and pinch-to-zoom on canvas background
+    useEffect(() => {
+        const container = containerRef.current
+        if (!container) return
+
+        const ts = { pinch: false, startDist: 0, startZoom: 1 }
+
+        const onTouchStart = (e) => {
+            if (e.touches.length === 2) {
+                const [t1, t2] = e.touches
+                const dx = t1.clientX - t2.clientX
+                const dy = t1.clientY - t2.clientY
+                ts.pinch = true
+                ts.startDist = Math.hypot(dx, dy)
+                ts.startZoom = zoom
+                e.preventDefault()
+                return
+            }
+
+            if (e.touches.length === 1 && e.target === container) {
+                const t = e.touches[0]
+                isPanningRef.current = true
+                panStartRef.current = {
+                    mouseX: t.clientX,
+                    mouseY: t.clientY,
+                    panX: pan.x,
+                    panY: pan.y,
+                }
+            }
+        }
+
+        const onTouchMove = (e) => {
+            if (ts.pinch && e.touches.length === 2) {
+                const [t1, t2] = e.touches
+                const dx = t1.clientX - t2.clientX
+                const dy = t1.clientY - t2.clientY
+                const dist = Math.hypot(dx, dy)
+                const ratio = dist / ts.startDist
+                const newZoom = clamp(ts.startZoom * ratio, 0.4, 2)
+                handleZoomChange(newZoom)
+                e.preventDefault()
+                return
+            }
+
+            if (isPanningRef.current && e.touches.length === 1) {
+                const t = e.touches[0]
+                const dx = t.clientX - panStartRef.current.mouseX
+                const dy = t.clientY - panStartRef.current.mouseY
+                setPan({
+                    x: panStartRef.current.panX + dx,
+                    y: panStartRef.current.panY + dy,
+                })
+                e.preventDefault()
+            }
+        }
+
+        const onTouchEnd = () => {
+            ts.pinch = false
+            isPanningRef.current = false
+        }
+
+        container.addEventListener("touchstart", onTouchStart, { passive: false })
+        container.addEventListener("touchmove", onTouchMove, { passive: false })
+        container.addEventListener("touchend", onTouchEnd)
+        container.addEventListener("touchcancel", onTouchEnd)
+
+        return () => {
+            container.removeEventListener("touchstart", onTouchStart)
+            container.removeEventListener("touchmove", onTouchMove)
+            container.removeEventListener("touchend", onTouchEnd)
+            container.removeEventListener("touchcancel", onTouchEnd)
+        }
+    }, [zoom, pan])
 
     useEffect(() => {
         // Keyboard shortcuts and block browser zoom
         const onKey = (e) => {
             if (e.key === "Escape") setSelected([])
 
-            // Block browser zoom: Ctrl/Meta + "+" or "-" or "="
-            if (
-                (e.ctrlKey || e.metaKey) &&
-                (e.key === "+" || e.key === "-" || e.key === "=")
-            ) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === "+" || e.key === "-" || e.key === "=")) {
                 e.preventDefault()
+            }
+            if (e.key === "f" && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault()
+                fitToView()
             }
         }
 
-        // Block browser zoom on wheel + Ctrl/Meta
         const onWheel = (e) => {
             if (e.ctrlKey || e.metaKey) {
                 e.preventDefault()
@@ -596,20 +753,18 @@ export default function Reviews() {
         window.addEventListener("keydown", onKey, { passive: false })
         window.addEventListener("wheel", onWheel, { passive: false })
 
-        // Mouse wheel zoom for map container
         const container = containerRef.current
         if (container) {
             const handleWheel = (e) => {
-                // Only zoom if Ctrl is NOT pressed (avoid browser zoom)
                 if (e.ctrlKey || e.metaKey) return
                 e.preventDefault()
                 const delta = e.deltaY
                 let newZoom = zoom
 
                 if (delta < 0) {
-                    newZoom = Math.min(2, zoom + 0.08)
+                    newZoom = clamp(zoom + 0.08, 0.4, 2)
                 } else if (delta > 0) {
-                    newZoom = Math.max(0.4, zoom - 0.08)
+                    newZoom = clamp(zoom - 0.08, 0.4, 2)
                 }
 
                 if (newZoom !== zoom) {
@@ -618,7 +773,6 @@ export default function Reviews() {
             }
             container.addEventListener("wheel", handleWheel, { passive: false })
 
-            // Cleanup wheel event
             return () => {
                 window.removeEventListener("keydown", onKey)
                 window.removeEventListener("wheel", onWheel)
@@ -626,254 +780,331 @@ export default function Reviews() {
             }
         }
 
-        // Cleanup keyboard event if container is not mounted
         return () => {
             window.removeEventListener("keydown", onKey)
             window.removeEventListener("wheel", onWheel)
         }
     }, [zoom, pan])
 
-  const getParents = (uniqueKey) => {
-    const rels = relations.filter((r) => r.toKey === uniqueKey)
-    return rels.map((r) => {
-      const from = canvasCards.find((c) => c.uniqueKey === r.fromKey)
-      return from?.id || "?"
-    })
-  }
+    const getParents = (uniqueKey) => {
+        const rels = relations.filter((r) => r.toKey === uniqueKey)
+        return rels.map((r) => {
+            const from = canvasCards.find((c) => c.uniqueKey === r.fromKey)
+            return from?.id || "?"
+        })
+    }
 
-  return (
-    <div className="bg-gray-900 min-h-screen flex flex-col text-white">
-      <Navbar />
-          <div className="flex flex-1 overflow-hidden mt-20">
-        {/* Left List */}
-              <div className="w-56 bg-gray-800 p-3 flex flex-col h-[calc(100vh-80px)]">
-          <h3 className="mb-2 font-bold">Danh sách thẻ</h3>
-          <div
-            className="flex-1 overflow-y-auto pr-2"
-            style={{
-              maxHeight: "calc(100vh - 80px)",
-              scrollbarWidth: "thin",
-              scrollbarColor: "#4B5563 #374151",
-            }}
-          >
-            <style jsx>{`
-              .flex-1::-webkit-scrollbar {
-                width: 6px;
-              }
-              .flex-1::-webkit-scrollbar-track {
-                background: #374151;
-                border-radius: 3px;
-              }
-              .flex-1::-webkit-scrollbar-thumb {
-                background: #4B5563;
-                border-radius: 3px;
-              }
-              .flex-1::-webkit-scrollbar-thumb:hover {
-                background: #6B7280;
-              }
-            `}</style>
-            {cards.map((c) => (
-              <div
-                key={c.id}
-                draggable
-                onDragStart={(e) => handleDragStartFromList(e, c)}
-                className="p-2 mb-2 bg-gray-700 rounded cursor-grab hover:bg-gray-600"
-              >
-                <div className="font-bold text-sm">{c.id}</div>
-                <div className="text-xs text-gray-300">Power: {c.power}</div>
-                <div className="text-xs text-gray-400">{c.rarity}</div>
-              </div>
-            ))}
-          </div>
-          <button onClick={handleAddCard} className="mt-2 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
-            + Tạo thẻ mới
-          </button>
-          <button onClick={handleRemoveCardFromList} className="mt-2 py-2 px-3 bg-red-600 hover:bg-red-500 rounded">
-            - Xóa thẻ khỏi danh sách
-          </button>
-        </div>
+    return (
+        <div className="bg-gray-900 min-h-screen flex flex-col text-white">
+            <Navbar />
 
-        {/* Map */}
-        <div
-          ref={containerRef}
-          className="flex-1 relative overflow-hidden"
-          style={{
-            backgroundImage: `url(${BgImage})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={handleDropToCanvas}
-          onMouseDown={handleCanvasMouseDown}
-        >
-                  <svg className="absolute left-0 top-0 w-full h-full pointer-events-none">
-                      {relations.map((r, i) => {
-                          const from = canvasCards.find((c) => c.uniqueKey === r.fromKey)
-                          const to = canvasCards.find((c) => c.uniqueKey === r.toKey)
-                          if (!from || !to) return null
-
-                          const A = instancePixelPos(from)
-                          const B = instancePixelPos(to)
-
-                          // Start point: bottom center of source card
-                          const startX = A.px + A.w / 2
-                          const startY = A.py + A.h
-
-                          // End point: top center of target card
-                          const endX = B.px + B.w / 2
-                          const endY = B.py
-
-                          // Create U-shaped connection with straight lines
-                          const midY = startY + (endY - startY) / 2
-
-                          // Triangle arrow size
-                          const arrowW = 16
-                          const arrowH = 12
-
-                          // Arrow at the end of the vertical line, pointing down
-                          return (
-                              <g key={i}>
-                                  {/* Vertical line down from source card */}
-                                  <line x1={startX} y1={startY} x2={startX} y2={midY} stroke="#000" strokeWidth={3} />
-                                  {/* Horizontal line connecting the two vertical lines */}
-                                  <line x1={startX} y1={midY} x2={endX} y2={midY} stroke="#000" strokeWidth={3} />
-                                  {/* Vertical line up to target card */}
-                                  <line x1={endX} y1={midY} x2={endX} y2={endY} stroke="#000" strokeWidth={3} />
-                                  {/* Triangle arrowhead at the top of the target card, pointing down */}
-                                  <polygon
-                                      points={`${endX - arrowW / 2},${endY} ${endX + arrowW / 2},${endY} ${endX},${endY + arrowH}`}
-                                      fill="#111"
-                                  />
-                              </g>
-                          )
-                      })}
-                  </svg>
-
-          {/*// Replace the card rendering block inside canvasCards.map with this:*/}
-
-                  {canvasCards.map((c) => {
-                      const { px, py } = instancePixelPos(c)
-                      const parents = getParents(c.uniqueKey)
-                      return (
-                          <div
-                              key={c.uniqueKey}
-                              onMouseDown={(e) => {
-                                  // Only start drag if mouse is moved (drag threshold)
-                                  let dragStarted = false
-                                  const startX = e.clientX
-                                  const startY = e.clientY
-
-                                  const onMouseMove = (ev) => {
-                                      if (!dragStarted) {
-                                          const dx = Math.abs(ev.clientX - startX)
-                                          const dy = Math.abs(ev.clientY - startY)
-                                          if (dx > 5 || dy > 5) {
-                                              dragStarted = true
-                                              handleDragCanvasCard(e, c.uniqueKey)
-                                          }
-                                      }
-                                  }
-
-                                  const onMouseUp = (ev) => {
-                                      document.removeEventListener("mousemove", onMouseMove)
-                                      document.removeEventListener("mouseup", onMouseUp)
-                                      if (!dragStarted) {
-                                          // If mouse didn't move much, treat as click/select
-                                          toggleSelectUnique(e, c.uniqueKey)
-                                      }
-                                  }
-
-                                  document.addEventListener("mousemove", onMouseMove)
-                                  document.addEventListener("mouseup", onMouseUp)
-                              }}
-                              onMouseEnter={() => setHoveredCard({ ...c, parents })}
-                              onMouseLeave={() => setHoveredCard(null)}
-                              style={{
-                                  position: "absolute",
-                                  left: px,
-                                  top: py,
-                                  transform: `scale(${zoom})`,
-                                  transformOrigin: "top left",
-                              }}
-                          >
-                              <CardNode
-                                  data={c}
-                                  selected={selected.includes(c.uniqueKey)}
-                                  position={{ x: c.x, y: c.y }}
-                                  uniqueKey={c.uniqueKey}
-                              />
-                          </div>
-                      )
-                  })}
-
-          <div className="absolute left-1/2 -translate-x-1/2 bottom-3 bg-gray-800 px-3 py-1 rounded shadow">
-            <span className="text-xs">Zoom</span>
-            <input
-              type="range"
-              min="0.4"
-              max="2"
-              step="0.05"
-              value={zoom}
-              onChange={(e) => handleZoomChange(Number(e.target.value))}
-              className="mx-2"
-            />
-            <span className="text-xs">{zoom.toFixed(2)}x</span>
-          </div>
-        </div>
-
-        {/* Right Panel */}
-        <div className="w-56 bg-gray-800 p-3 flex flex-col">
-          <h3 className="mb-2 font-bold">Thao tác</h3>
-          <button onClick={handleMerge} className="mb-2 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
-            Ghép thẻ
-          </button>
-          <button onClick={handleDelete} className="mb-2 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
-            Xóa thẻ
-          </button>
-          <button onClick={handleUpdate} className="mb-4 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
-            Cập nhật thẻ
-          </button>
-          <div className="flex-1"></div>
-          {/*minimap */}
-          <div>
-            <h4 className="text-sm mb-1">Minimap</h4>
-            <div
-              ref={minimapRef}
-              onClick={handleMinimapClick}
-              className="relative bg-gray-700 border border-gray-500"
-              style={{ width: MINIMAP_SIZE, height: MINIMAP_SIZE }}
-            >
-              {(() => {
-                const rect = containerRef.current?.getBoundingClientRect()
-                if (!rect) return null
-                const worldWidth = rect.width * zoom
-                const worldHeight = rect.height * zoom
-                return canvasCards.map((c) => {
-                  const { px, py, w, h } = instancePixelPos(c)
-                  const minix = (px / worldWidth) * 60
-                  const miniy = (py / worldHeight) * 60
-                  const miniw = (w / worldWidth) * 80
-                  const minih = (h / worldHeight) * 50
-                  return (
+            {/* Main layout: stack on mobile, columns on md+ */}
+            <div className="flex flex-1 overflow-hidden mt-20 flex-col md:flex-row">
+                {/* Left List (desktop/tablet) */}
+                <div className="hidden md:flex md:w-56 lg:w-64 xl:w-72 bg-gray-800 p-3 flex-col h-[calc(100vh-80px)]">
+                    <h3 className="mb-2 font-bold">Danh sách thẻ</h3>
                     <div
-                      key={c.uniqueKey}
-                      style={{
-                        position: "absolute",
-                        left: minix,
-                        top: miniy,
-                        width: miniw,
-                        height: minih,
-                        background: "#ec4899",
-                      }}
-                    />
-                  )
-                })
-              })()}
+                        className="flex-1 overflow-y-auto pr-2"
+                        style={{
+                            maxHeight: "calc(100vh - 80px)",
+                            scrollbarWidth: "thin",
+                            scrollbarColor: "#4B5563 #374151",
+                        }}
+                    >
+                        <style jsx>{`
+              .flex-1::-webkit-scrollbar { width: 6px; }
+              .flex-1::-webkit-scrollbar-track { background: #374151; border-radius: 3px; }
+              .flex-1::-webkit-scrollbar-thumb { background: #4B5563; border-radius: 3px; }
+              .flex-1::-webkit-scrollbar-thumb:hover { background: #6B7280; }
+            `}</style>
+                        {cards.map((c) => (
+                            <div
+                                key={c.id}
+                                draggable
+                                onDragStart={(e) => handleDragStartFromList(e, c)}
+                                className="p-2 mb-2 bg-gray-700 rounded cursor-grab hover:bg-gray-600"
+                            >
+                                <div className="font-bold text-sm">{c.id}</div>
+                                <div className="text-xs text-gray-300">Power: {c.power}</div>
+                                <div className="text-xs text-gray-400">{c.rarity}</div>
+                            </div>
+                        ))}
+                    </div>
+                    <button onClick={handleAddCard} className="mt-2 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
+                        + Tạo thẻ mới
+                    </button>
+                    <button onClick={handleRemoveCardFromList} className="mt-2 py-2 px-3 bg-red-600 hover:bg-red-500 rounded">
+                        - Xóa thẻ khỏi danh sách
+                    </button>
+                </div>
+
+                {/* Map */}
+                <div
+                    ref={containerRef}
+                    className="flex-1 relative overflow-hidden"
+                    style={{
+                        backgroundImage: `url(${BgImage})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        touchAction: "none",
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={handleDropToCanvas}
+                    onMouseDown={handleCanvasMouseDown}
+                >
+                    {/* Mobile toggles for side panels */}
+                    <div className="md:hidden absolute top-2 left-2 z-50 flex gap-2">
+                        <button
+                            className="px-3 py-1 rounded bg-gray-800/80 backdrop-blur hover:bg-gray-700"
+                            onClick={() => setShowCardsPanel(true)}
+                        >
+                            Cards
+                        </button>
+                        <button
+                            className="px-3 py-1 rounded bg-gray-800/80 backdrop-blur hover:bg-gray-700"
+                            onClick={() => setShowActionsPanel(true)}
+                        >
+                            Actions
+                        </button>
+                    </div>
+
+                    {/* Connections */}
+                    <svg className="absolute left-0 top-0 w-full h-full pointer-events-none">
+                        {relations.map((r, i) => {
+                            const from = canvasCards.find((c) => c.uniqueKey === r.fromKey)
+                            const to = canvasCards.find((c) => c.uniqueKey === r.toKey)
+                            if (!from || !to) return null
+
+                            const A = instancePixelPos(from)
+                            const B = instancePixelPos(to)
+
+                            const startX = A.px + A.w / 2
+                            const startY = A.py + A.h
+                            const endX = B.px + B.w / 2
+                            const endY = B.py
+                            const midY = startY + (endY - startY) / 2
+
+                            const arrowW = 16
+                            const arrowH = 12
+
+                            return (
+                                <g key={i}>
+                                    <line x1={startX} y1={startY} x2={startX} y2={midY} stroke="#000" strokeWidth={3} />
+                                    <line x1={startX} y1={midY} x2={endX} y2={midY} stroke="#000" strokeWidth={3} />
+                                    <line x1={endX} y1={midY} x2={endX} y2={endY} stroke="#000" strokeWidth={3} />
+                                    <polygon
+                                        points={`${endX - arrowW / 2},${endY} ${endX + arrowW / 2},${endY} ${endX},${endY + arrowH}`}
+                                        fill="#111"
+                                    />
+                                </g>
+                            )
+                        })}
+                    </svg>
+
+                    {/* Cards */}
+                    {canvasCards.map((c) => {
+                        const { px, py } = instancePixelPos(c)
+                        const parents = getParents(c.uniqueKey)
+                        return (
+                            <div
+                                key={c.uniqueKey}
+                                onPointerDown={(e) => handleCardPointerDown(e, c)}
+                                onMouseEnter={() => setHoveredCard({ ...c, parents })}
+                                onMouseLeave={() => setHoveredCard(null)}
+                                style={{ position: "absolute", left: px, top: py, transform: `scale(${zoom})`, transformOrigin: "top left" }}
+                            >
+                                <CardNode
+                                    data={c}
+                                    selected={selected.includes(c.uniqueKey)}
+                                    position={{ x: c.x, y: c.y }}
+                                    uniqueKey={c.uniqueKey}
+                                />
+                            </div>
+                        )
+                    })}
+
+                    {/* Zoom toolbar */}
+                    <div className="absolute left-1/2 -translate-x-1/2 bottom-3 bg-gray-800/90 px-3 py-1 rounded shadow flex items-center gap-2">
+                        <button className="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600" onClick={zoomOut} aria-label="Zoom out">
+                            -
+                        </button>
+                        <span className="text-xs">Zoom</span>
+                        <input
+                            type="range"
+                            min="0.4"
+                            max="2"
+                            step="0.05"
+                            value={zoom}
+                            onChange={(e) => handleZoomChange(Number(e.target.value))}
+                            className="mx-2 align-middle"
+                        />
+                        <span className="text-xs w-10 text-center">{zoom.toFixed(2)}x</span>
+                        <button className="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600" onClick={zoomIn} aria-label="Zoom in">
+                            +
+                        </button>
+                        <button className="ml-2 px-2 py-1 bg-pink-600 hover:bg-pink-500 rounded text-xs" onClick={fitToView}>
+                            Fit
+                        </button>
+                    </div>
+                </div>
+
+                {/* Right Panel (desktop/tablet) */}
+                <div className="hidden md:flex md:w-56 lg:w-64 xl:w-72 bg-gray-800 p-3 flex-col">
+                    <h3 className="mb-2 font-bold">Thao tác</h3>
+                    <button onClick={handleMerge} className="mb-2 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
+                        Ghép thẻ
+                    </button>
+                    <button onClick={handleDelete} className="mb-2 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
+                        Xóa thẻ
+                    </button>
+                    <button onClick={handleUpdate} className="mb-4 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
+                        Cập nhật thẻ
+                    </button>
+                    <div className="flex-1"></div>
+                    {/* Minimap */}
+                    <div>
+                        <h4 className="text-sm mb-1">Minimap</h4>
+                        <div
+                            ref={minimapRef}
+                            onClick={handleMinimapClick}
+                            className="relative bg-gray-700 border border-gray-500"
+                            style={{ width: MINIMAP_SIZE, height: MINIMAP_SIZE }}
+                        >
+                            {(() => {
+                                const rect = containerRef.current?.getBoundingClientRect()
+                                if (!rect) return null
+                                const worldWidth = rect.width * zoom
+                                const worldHeight = rect.height * zoom
+                                return canvasCards.map((c) => {
+                                    const { px, py, w, h } = instancePixelPos(c)
+                                    const minix = (px / worldWidth) * MINIMAP_SIZE
+                                    const miniy = (py / worldHeight) * MINIMAP_SIZE
+                                    const miniw = (w / worldWidth) * MINIMAP_SIZE
+                                    const minih = (h / worldHeight) * MINIMAP_SIZE
+                                    return (
+                                        <div
+                                            key={c.uniqueKey}
+                                            style={{
+                                                position: "absolute",
+                                                left: minix,
+                                                top: miniy,
+                                                width: miniw,
+                                                height: minih,
+                                                background: "#ec4899",
+                                            }}
+                                        />
+                                    )
+                                })
+                            })()}
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
+
+            {/* Mobile Overlays */}
+            {showCardsPanel && (
+                <div className="fixed inset-0 z-50 md:hidden">
+                    <div className="absolute inset-0 bg-black/50" onClick={() => setShowCardsPanel(false)} />
+                    <div
+                        className="absolute bottom-0 left-0 right-0 bg-gray-800 rounded-t-2xl p-4 max-h-[80vh] overflow-y-auto"
+                        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+                    >
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="font-bold">Danh sách thẻ</h3>
+                            <button className="px-3 py-1 bg-gray-700 rounded" onClick={() => setShowCardsPanel(false)}>
+                                Close
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2">
+                            {cards.map((c) => (
+                                <div
+                                    key={c.id}
+                                    draggable={!isTouchDevice}
+                                    onDragStart={(e) => !isTouchDevice && handleDragStartFromList(e, c)}
+                                    onClick={() => isTouchDevice && addCardToCanvasCenter(c)}
+                                    className="p-2 bg-gray-700 rounded hover:bg-gray-600 active:bg-gray-600"
+                                >
+                                    <div className="font-bold text-sm">{c.id}</div>
+                                    <div className="text-xs text-gray-300">Power: {c.power}</div>
+                                    <div className="text-xs text-gray-400">{c.rarity}</div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="flex gap-2 mt-3">
+                            <button onClick={handleAddCard} className="flex-1 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
+                                + Tạo thẻ mới
+                            </button>
+                            <button onClick={handleRemoveCardFromList} className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-500 rounded">
+                                - Xóa thẻ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showActionsPanel && (
+                <div className="fixed inset-0 z-50 md:hidden">
+                    <div className="absolute inset-0 bg-black/50" onClick={() => setShowActionsPanel(false)} />
+                    <div
+                        className="absolute bottom-0 left-0 right-0 bg-gray-800 rounded-t-2xl p-4 max-h-[80vh] overflow-y-auto"
+                        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+                    >
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="font-bold">Thao tác</h3>
+                            <button className="px-3 py-1 bg-gray-700 rounded" onClick={() => setShowActionsPanel(false)}>
+                                Close
+                            </button>
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={handleMerge} className="flex-1 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
+                                Ghép thẻ
+                            </button>
+                            <button onClick={handleDelete} className="flex-1 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
+                                Xóa thẻ
+                            </button>
+                            <button onClick={handleUpdate} className="flex-1 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded">
+                                Cập nhật
+                            </button>
+                        </div>
+                        <div className="mt-4">
+                            <h4 className="text-sm mb-1">Minimap</h4>
+                            <div
+                                ref={minimapRef}
+                                onClick={handleMinimapClick}
+                                className="relative bg-gray-700 border border-gray-500 mx-auto"
+                                style={{ width: MINIMAP_SIZE, height: MINIMAP_SIZE }}
+                            >
+                                {(() => {
+                                    const rect = containerRef.current?.getBoundingClientRect()
+                                    if (!rect) return null
+                                    const worldWidth = rect.width * zoom
+                                    const worldHeight = rect.height * zoom
+                                    return canvasCards.map((c) => {
+                                        const { px, py, w, h } = instancePixelPos(c)
+                                        const minix = (px / worldWidth) * MINIMAP_SIZE
+                                        const miniy = (py / worldHeight) * MINIMAP_SIZE
+                                        const miniw = (w / worldWidth) * MINIMAP_SIZE
+                                        const minih = (h / worldHeight) * MINIMAP_SIZE
+                                        return (
+                                            <div
+                                                key={c.uniqueKey}
+                                                style={{
+                                                    position: "absolute",
+                                                    left: minix,
+                                                    top: miniy,
+                                                    width: miniw,
+                                                    height: minih,
+                                                    background: "#ec4899",
+                                                }}
+                                            />
+                                        )
+                                    })
+                                })()}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
-      </div>
-    
-    </div>
-  )
+    )
 }
