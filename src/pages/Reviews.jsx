@@ -11,7 +11,7 @@ export default function Reviews() {
     const [CARD_H, setCARD_H] = useState(280)
 
     // Zoom bounds (unified)
-    const MIN_ZOOM = 0.35
+    const MIN_ZOOM = 0.1
     const MAX_ZOOM = 3
 
     const clamp = (n, min, max) => Math.min(max, Math.max(min, n))
@@ -36,6 +36,14 @@ export default function Reviews() {
     const [zoom, setZoom] = useState(1)
     const [pan, setPan] = useState({ x: 0, y: 0 })
     const [hoveredCard, setHoveredCard] = useState(null)
+
+    // Desktop sidebars open/close
+    const [leftOpen, setLeftOpen] = useState(true)
+    const [rightOpen, setRightOpen] = useState(true)
+
+    // REVEAL: edge hover states for desktop toggle buttons
+    const [showLeftToggle, setShowLeftToggle] = useState(false)
+    const [showRightToggle, setShowRightToggle] = useState(false)
 
     // Mobile overlays + animation states
     const [showCardsPanel, setShowCardsPanel] = useState(false)   // mounted
@@ -92,7 +100,6 @@ export default function Reviews() {
         if (!el) return
         const ro = new ResizeObserver((entries) => {
             const { width: w } = entries[0].contentRect
-            // Target ~3.6 cards per row on small screens; clamp for readability
             const targetW = clamp(Math.round(w / 3.6), 140, 220)
             const targetH = Math.round(targetW * 1.35)
             setCARD_W(targetW)
@@ -102,232 +109,338 @@ export default function Reviews() {
         return () => ro.disconnect()
     }, [])
 
+  
+
     function CardNode({ data, selected: isSelected, position, uniqueKey }) {
         const [hovered, setHovered] = useState(false)
+        const [tilt, setTilt] = useState({ x: 0, y: 0 })
+        const [shine, setShine] = useState({ x: 50, y: 50 })
+        const moveRaf = useRef(0)
+        const nodeRef = useRef(null)
+
         const small = CARD_W <= 160
         const BASE_W = 200
         const BASE_H = 280
         const cardScale = CARD_W / BASE_W
 
+        const updateFrom = (clientX, clientY) => {
+            if (!nodeRef.current) return
+            const rect = nodeRef.current.getBoundingClientRect()
+            const px = clientX - rect.left
+            const py = clientY - rect.top
+            const nx = (px / rect.width) * 2 - 1
+            const ny = (py / rect.height) * 2 - 1
+            const MAX = 12
+            cancelAnimationFrame(moveRaf.current)
+            moveRaf.current = requestAnimationFrame(() => {
+                setTilt({ x: nx * MAX, y: -ny * MAX })
+                setShine({ x: (px / rect.width) * 100, y: (py / rect.height) * 100 })
+            })
+        }
+
+        const onPointerMove = (e) => {
+            if (e.pointerType === "touch" || !hovered) return
+            updateFrom(e.clientX, e.clientY)
+        }
+        const onMouseMove = (e) => {
+            // Fallback when DevTools emulates touch (no pointer events for hover)
+            if (!hovered) return
+            updateFrom(e.clientX, e.clientY)
+        }
+
+        const resetHover = () => {
+            cancelAnimationFrame(moveRaf.current)
+            setTilt({ x: 0, y: 0 })
+            setShine({ x: 50, y: 50 })
+        }
+
         return (
             <div
+                ref={nodeRef}
                 style={{
                     width: BASE_W,
                     height: BASE_H,
-                    background: isSelected
-                        ? "linear-gradient(135deg, #DC2626, #B91C1C)"
-                        : "linear-gradient(135deg, #FCA5A5, #F87171)",
-                    border: isSelected ? "4px solid #7F1D1D" : "4px solid #B91C1C",
-                    borderRadius: 12,
-                    boxShadow: small
-                        ? "0 4px 10px rgba(185, 28, 28, 0.35)"
-                        : isSelected
-                            ? "0 12px 30px rgba(127, 29, 29, 0.6), 0 0 0 2px #FEF3C7"
-                            : "0 8px 20px rgba(185, 28, 28, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "flex-start",
-                    color: "#1F2937",
-                    fontWeight: "bold",
-                    cursor: "pointer",
                     position: "relative",
-                    overflow: "visible",
-                    fontFamily: "serif",
-                    transform: `scale(${cardScale * (isSelected ? 1.05 : 1)})`,
+                    transform: `scale(${cardScale * (isSelected ? 1.05 : hovered ? 1.03 : 1)})`,
                     transformOrigin: "top left",
-                    transition: "transform 200ms ease, box-shadow 200ms ease, filter 200ms ease",
-                    paddingTop: 24,
+                    transition: "transform 220ms ease, filter 220ms ease",
+                    filter: hovered ? "brightness(1.04) saturate(1.05)" : "none",
+                    cursor: "pointer",
                 }}
+                // Enter: accept any non-touch pointer
+                onPointerEnter={(e) => {
+                    if (e.pointerType !== "touch") setHovered(true)
+                }}
+                // Leave: only when the pointer truly exits this element (not when moving between children)
+                onPointerOutCapture={(e) => {
+                    if (e.pointerType === "touch") return
+                    // If the next element is still inside this card, ignore
+                    const next = e.relatedTarget
+                    if (next && nodeRef.current && nodeRef.current.contains(next)) return
+                    setHovered(false)
+                    resetHover()
+                }}
+                onPointerMove={(e) => {
+                    if (e.pointerType !== "touch" && hovered) updateFrom(e.clientX, e.clientY)
+                }}
+                onPointerCancel={() => { setHovered(false); resetHover() }}
+                // Optional mouse fallback (helps on odd devices)
                 onMouseEnter={() => setHovered(true)}
-                onMouseLeave={() => setHovered(false)}
+                onMouseLeave={() => { setHovered(false); resetHover() }}
+                onMouseMove={(e) => { if (hovered) updateFrom(e.clientX, e.clientY) }}
             >
-                {data.isFusion && (
-                    <svg width="32" height="24" style={{ position: "absolute", top: -24, left: "50%", transform: "translateX(-50%) rotate(180deg)", zIndex: 30, pointerEvents: "none" }} viewBox="0 0 32 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <polygon points="16,0 32,20 0,20" fill="#111" />
-                        <rect x="12" y="20" width="8" height="4" fill="#111" />
-                    </svg>
-                )}
-
-                {/* Top node */}
                 <div
                     style={{
                         position: "absolute",
-                        top: -8,
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        width: 16,
-                        height: 16,
-                        borderRadius: "50%",
-                        background: isSelected ? "#FEF3C7" : "#DC2626",
-                        border: "2px solid #fff",
-                        cursor: "pointer",
-                        zIndex: 20,
-                        boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-                        transition: "transform 150ms ease",
-                    }}
-                    onClick={(e) => {
-                        e.stopPropagation()
-                        console.log(" Top connection node ", uniqueKey)
-                    }}
-                    onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.9)")}
-                    onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-                />
-
-                {/* Bottom node */}
-                <div
-                    style={{
-                        position: "absolute",
-                        bottom: -8,
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        width: 16,
-                        height: 16,
-                        borderRadius: "50%",
-                        background: isSelected ? "#FEF3C7" : "#DC2626",
-                        border: "2px solid #fff",
-                        cursor: "pointer",
-                        zIndex: 20,
-                        boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-                        transition: "transform 150ms ease",
-                    }}
-                    onClick={(e) => {
-                        e.stopPropagation()
-                        console.log(" Bottom connection node ", uniqueKey)
-                    }}
-                    onMouseDown={(e) => (e.currentTarget.style.transform = "translateX(-50%) scale(0.9)")}
-                    onMouseUp={(e) => (e.currentTarget.style.transform = "translateX(-50%) scale(1)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.transform = "translateX(-50%) scale(1)")}
-                />
-
-                {/* Cost circle */}
-                <div
-                    style={{
-                        position: "absolute",
-                        top: 12,
-                        left: 12,
-                        width: 32,
-                        height: 32,
-                        borderRadius: "50%",
+                        inset: 0,
                         background: isSelected
-                            ? "linear-gradient(135deg, #FEF3C7, #FDE68A)"
-                            : "linear-gradient(135deg, #DC2626, #B91C1C)",
-                        border: isSelected ? "3px solid #F59E0B" : "3px solid #7F1D1D",
+                            ? "linear-gradient(135deg, #DC2626, #B91C1C)"
+                            : "linear-gradient(135deg, #FCA5A5, #F87171)",
+                        border: isSelected ? "4px solid #7F1D1D" : "4px solid #B91C1C",
+                        borderRadius: 12,
+                        boxShadow: hovered
+                            ? "0 16px 35px rgba(185, 28, 28, 0.50), 0 0 0 2px rgba(255,255,255,0.06) inset"
+                            : small
+                                ? "0 4px 10px rgba(185, 28, 28, 0.35)"
+                                : isSelected
+                                    ? "0 12px 30px rgba(127, 29, 29, 0.6), 0 0 0 2px #FEF3C7"
+                                    : "0 8px 20px rgba(185, 28, 28, 0.4), inset 0 1px 0 rgba(255,255,255,0.18)",
                         display: "flex",
+                        flexDirection: "column",
                         alignItems: "center",
-                        justifyContent: "center",
-                        color: isSelected ? "#92400E" : "#FEF3C7",
-                        fontSize: 14,
+                        justifyContent: "flex-start",
+                        color: "#1F2937",
                         fontWeight: "bold",
-                        zIndex: 10,
-                        boxShadow: isSelected ? "0 2px 8px rgba(245, 158, 11, 0.4)" : "0 2px 8px rgba(127, 29, 29, 0.4)",
-                        transition: "transform 150ms ease",
-                    }}
-                    onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.96)")}
-                    onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-                >
-                    {data.power || "--"}
-                </div>
-
-                {/* Header */}
-                <div
-                    style={{
-                        width: "calc(100% - 16px)",
-                        margin: "8px 8px 0 8px",
-                        background: isSelected
-                            ? "linear-gradient(135deg, #FEF3C7, #FDE68A)"
-                            : "linear-gradient(135deg, #FEE2E2, #FECACA)",
-                        color: isSelected ? "#92400E" : "#1F2937",
-                        padding: "12px 16px",
-                        fontSize: 16,
-                        textAlign: "center",
-                        borderRadius: "8px 8px 0 0",
-                        fontWeight: "bold",
-                        textShadow: "0 1px 2px rgba(0,0,0,0.1)",
-                        border: isSelected ? "2px solid #F59E0B" : "2px solid #B91C1C",
-                        borderBottom: "none",
-                        position: "relative",
+                        overflow: "visible",
+                        fontFamily: "serif",
+                        paddingTop: 24,
+                        transform: `perspective(900px) rotateX(${tilt.y}deg) rotateY(${tilt.x}deg)`,
+                        transformStyle: "preserve-3d",
+                        transition: "box-shadow 200ms ease",
+                        pointerEvents: "auto",
                     }}
                 >
-                    {data.label || data.id}
-                </div>
+                    <div
+                        style={{
+                            position: "absolute",
+                            inset: 0,
+                            borderRadius: 12,
+                            pointerEvents: "none",
+                            mixBlendMode: "screen",
+                            background: hovered
+                                ? `radial-gradient(600px 300px at ${shine.x}% ${shine.y}%, rgba(255,255,255,0.35), rgba(255,255,255,0.06) 30%, rgba(255,255,255,0) 60%)`
+                                : "transparent",
+                            transition: "background 120ms ease",
+                            zIndex: 2,
+                        }}
+                    />
 
-                {/* Image */}
-                <img
-                    src={data.img || "/placeholder.svg?height=120&width=184"}
-                    alt={data.label || data.id}
-                    style={{
-                        width: "calc(100% - 16px)",
-                        height: 100,
-                        objectFit: "cover",
-                        border: isSelected ? "2px solid #F59E0B" : "2px solid #B91C1C",
-                        borderTop: "none",
-                        borderBottom: "none",
-                        background: "linear-gradient(135deg, #F3F4F6, #E5E7EB)",
-                        margin: "0 8px",
-                        pointerEvents: "none",
-                    }}
-                />
+                    {/* Top node */}
+                    <div
+                        style={{
+                            position: "absolute",
+                            top: -8,
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                            width: 16,
+                            height: 16,
+                            borderRadius: "50%",
+                            background: isSelected ? "#FEF3C7" : "#DC2626",
+                            border: "2px solid #fff",
+                            cursor: "pointer",
+                            zIndex: 20,
+                            boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                            transition: "transform 150ms ease",
+                        }}
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            console.log(" Top connection node ", uniqueKey)
+                        }}
+                        onMouseDown={(e) => (e.currentTarget.style.transform = "translateX(-50%) scale(0.9)")}
+                        onMouseUp={(e) => (e.currentTarget.style.transform = "translateX(-50%) scale(1)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.transform = "translateX(-50%) scale(1)")}
+                    />
 
-                {/* Content */}
-                <div
-                    style={{
-                        flex: 1,
-                        width: "calc(100% - 16px)",
-                        margin: "0 8px 8px 8px",
-                        background: isSelected
-                            ? "linear-gradient(135deg, #FEF3C7, #FDE68A)"
-                            : "linear-gradient(135deg, #FEE2E2, #FECACA)",
-                        padding: "12px",
-                        fontSize: 11,
-                        fontWeight: "normal",
-                        color: isSelected ? "#92400E" : "#1F2937",
-                        textAlign: "left",
-                        lineHeight: 1.4,
-                        border: isSelected ? "2px solid #F59E0B" : "2px solid #B91C1C",
-                        borderTop: "none",
-                        borderRadius: "0 0 8px 8px",
-                        position: "relative",
-                    }}
-                >
-                    <div style={{ fontWeight: "bold", color: isSelected ? "#D97706" : "#DC2626", marginBottom: 6, fontSize: 13 }}>
-                        {data.title || data.label || data.id}
+                    {/* Bottom node */}
+                    <div
+                        style={{
+                            position: "absolute",
+                            bottom: -8,
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                            width: 16,
+                            height: 16,
+                            borderRadius: "50%",
+                            background: isSelected ? "#FEF3C7" : "#DC2626",
+                            border: "2px solid #fff",
+                            cursor: "pointer",
+                            zIndex: 20,
+                            boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                            transition: "transform 150ms ease",
+                        }}
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            console.log(" Bottom connection node ", uniqueKey)
+                        }}
+                        onMouseDown={(e) => (e.currentTarget.style.transform = "translateX(-50%) scale(0.9)")}
+                        onMouseUp={(e) => (e.currentTarget.style.transform = "translateX(-50%) scale(1)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.transform = "translateX(-50%) scale(1)")}
+                    />
+
+                    {/* Cost circle */}
+                    <div
+                        style={{
+                            position: "absolute",
+                            top: 12,
+                            left: 12,
+                            width: 32,
+                            height: 32,
+                            borderRadius: "50%",
+                            background: isSelected
+                                ? "linear-gradient(135deg, #FEF3C7, #FDE68A)"
+                                : "linear-gradient(135deg, #DC2626, #B91C1C)",
+                            border: isSelected ? "3px solid #F59E0B" : "3px solid #7F1D1D",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: isSelected ? "#92400E" : "#FEF3C7",
+                            fontSize: 14,
+                            fontWeight: "bold",
+                            zIndex: 10,
+                            boxShadow: isSelected ? "0 2px 8px rgba(245, 158, 11, 0.4)" : "0 2px 8px rgba(127, 29, 29, 0.4)",
+                            transition: "transform 150ms ease",
+                            transform: hovered ? "translateZ(30px)" : "translateZ(0)",
+                        }}
+                        onMouseDown={(e) => (e.currentTarget.style.transform = "translateZ(30px) scale(0.96)")}
+                        onMouseUp={(e) => (e.currentTarget.style.transform = "translateZ(30px) scale(1)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.transform = hovered ? "translateZ(30px)" : "translateZ(0)")}
+                    >
+                        {data.power || "--"}
                     </div>
-                    <div style={{ color: isSelected ? "#92400E" : "#374151", fontSize: 10, lineHeight: 1.3 }}>
-                        {data.description || "Một thẻ bài mạnh mẽ với khả năng đặc biệt trong trận chiến."}
+
+                    {/* Header */}
+                    <div
+                        style={{
+                            width: "calc(100% - 16px)",
+                            margin: "8px 8px 0 8px",
+                            background: isSelected
+                                ? "linear-gradient(135deg, #FEF3C7, #FDE68A)"
+                                : "linear-gradient(135deg, #FEE2E2, #FECACA)",
+                            color: isSelected ? "#92400E" : "#1F2937",
+                            padding: "12px 16px",
+                            fontSize: 16,
+                            textAlign: "center",
+                            borderRadius: "8px 8px 0 0",
+                            fontWeight: "bold",
+                            textShadow: hovered ? "0 2px 6px rgba(0,0,0,0.2)" : "0 1px 2px rgba(0,0,0,0.1)",
+                            border: isSelected ? "2px solid #F59E0B" : "2px solid #B91C1C",
+                            borderBottom: "none",
+                            position: "relative",
+                            transform: hovered ? "translateZ(15px)" : "translateZ(0)",
+                            transition: "transform 180ms ease, text-shadow 180ms ease",
+                        }}
+                    >
+                        {data.label || data.id}
+                    </div>
+
+                    {/* Image */}
+                    <div style={{ position: "relative", width: "100%" }}>
+                        <img
+                            src={data.img || "/placeholder.svg?height=120&width=184"}
+                            alt={data.label || data.id}
+                            style={{
+                                width: "calc(100% - 16px)",
+                                height: 100,
+                                objectFit: "cover",
+                                border: isSelected ? "2px solid #F59E0B" : "2px solid #B91C1C",
+                                borderTop: "none",
+                                borderBottom: "none",
+                                background: "linear-gradient(135deg, #F3F4F6, #E5E7EB)",
+                                margin: "0 8px",
+                                pointerEvents: "none",
+                                transform: hovered ? "translateZ(10px) scale(1.02)" : "translateZ(0) scale(1)",
+                                transition: "transform 200ms ease",
+                            }}
+                        />
+                        {!hovered ? null : (
+                            <div
+                                style={{
+                                    position: "absolute",
+                                    inset: 0,
+                                    margin: "0 8px",
+                                    background: `radial-gradient(40% 60% at ${shine.x}% ${shine.y}%, rgba(255,255,255,0.22), rgba(255,255,255,0) 60%)`,
+                                    pointerEvents: "none",
+                                    transition: "background 120ms ease",
+                                }}
+                            />
+                        )}
+                    </div>
+
+                    {/* Content */}
+                    <div
+                        style={{
+                            flex: 1,
+                            width: "calc(100% - 16px)",
+                            margin: "0 8px 8px 8px",
+                            background: isSelected
+                                ? "linear-gradient(135deg, #FEF3C7, #FDE68A)"
+                                : "linear-gradient(135deg, #FEE2E2, #FECACA)",
+                            padding: "12px",
+                            fontSize: 11,
+                            fontWeight: "normal",
+                            color: isSelected ? "#92400E" : "#1F2937",
+                            textAlign: "left",
+                            lineHeight: 1.4,
+                            border: isSelected ? "2px solid #F59E0B" : "2px solid #B91C1C",
+                            borderTop: "none",
+                            borderRadius: "0 0 8px 8px",
+                            position: "relative",
+                            transform: hovered ? "translateZ(12px)" : "translateZ(0)",
+                            transition: "transform 180ms ease",
+                        }}
+                    >
+                        <div style={{ fontWeight: "bold", color: isSelected ? "#D97706" : "#DC2626", marginBottom: 6, fontSize: 13 }}>
+                            {data.title || data.label || data.id}
+                        </div>
+                        <div style={{ color: isSelected ? "#92400E" : "#374151", fontSize: 10, lineHeight: 1.3 }}>
+                            {data.description || "Một thẻ bài mạnh mẽ với khả năng đặc biệt trong trận chiến."}
+                        </div>
+                    </div>
+
+                    {/* Bottom right diamond */}
+                    <div
+                        style={{
+                            position: "absolute",
+                            bottom: 8,
+                            right: 8,
+                            width: 32,
+                            height: 32,
+                            background: isSelected
+                                ? "linear-gradient(135deg, #FEF3C7, #FDE68A)"
+                                : "linear-gradient(135deg, #DC2626, #B91C1C)",
+                            border: isSelected ? "2px solid #F59E0B" : "2px solid #7F1D1D",
+                            transform: hovered ? "rotate(45deg) translateZ(14px)" : "rotate(45deg)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: isSelected ? "#92400E" : "#FEF3C7",
+                            fontSize: 12,
+                            fontWeight: "bold",
+                            zIndex: 10,
+                            boxShadow: isSelected
+                                ? "0 2px 6px rgba(245, 158, 11, 0.4)"
+                                : hovered
+                                    ? "0 4px 10px rgba(127, 29, 29, 0.45)"
+                                    : "0 2px 6px rgba(127, 29, 29, 0.3)",
+                            transition: "transform 180ms ease, box-shadow 180ms ease",
+                        }}
+                    >
+                        <span style={{ transform: "rotate(-45deg)" }}>{data.rarity?.[0] || "?"}</span>
                     </div>
                 </div>
 
-                {/* Bottom right diamond */}
-                <div
-                    style={{
-                        position: "absolute",
-                        bottom: 8,
-                        right: 8,
-                        width: 32,
-                        height: 32,
-                        background: isSelected
-                            ? "linear-gradient(135deg, #FEF3C7, #FDE68A)"
-                            : "linear-gradient(135deg, #DC2626, #B91C1C)",
-                        border: isSelected ? "2px solid #F59E0B" : "2px solid #7F1D1D",
-                        transform: "rotate(45deg)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: isSelected ? "#92400E" : "#FEF3C7",
-                        fontSize: 12,
-                        fontWeight: "bold",
-                        zIndex: 10,
-                        boxShadow: isSelected ? "0 2px 6px rgba(245, 158, 11, 0.3)" : "0 2px 6px rgba(127, 29, 29, 0.3)",
-                    }}
-                >
-                    <span style={{ transform: "rotate(-45deg)" }}>{data.rarity?.[0] || "?"}</span>
-                </div>
-
-                {/* Tooltip (hidden on touch to avoid overlap) */}
-                {!isTouchDevice && hovered && (
+                {/* Tooltip */}
+                {hovered && (
                     <div
                         style={{
                             position: "absolute",
@@ -351,18 +464,10 @@ export default function Reviews() {
                             transition: "opacity 150ms ease",
                         }}
                     >
-                        <div>
-                            <strong style={{ color: "#FEF3C7" }}>Name:</strong> {data.label || data.id}
-                        </div>
-                        <div>
-                            <strong style={{ color: "#FEF3C7" }}>Description:</strong> {data.description || "No description"}
-                        </div>
-                        <div>
-                            <strong style={{ color: "#FEF3C7" }}>Power:</strong> {data.power ?? "?"}
-                        </div>
-                        <div>
-                            <strong style={{ color: "#FEF3C7" }}>Rarity:</strong> {data.rarity || "Unknown"}
-                        </div>
+                        <div><strong style={{ color: "#FEF3C7" }}>Name:</strong> {data.label || data.id}</div>
+                        <div><strong style={{ color: "#FEF3C7" }}>Description:</strong> {data.description || "No description"}</div>
+                        <div><strong style={{ color: "#FEF3C7" }}>Power:</strong> {data.power ?? "?"}</div>
+                        <div><strong style={{ color: "#FEF3C7" }}>Rarity:</strong> {data.rarity || "Unknown"}</div>
                     </div>
                 )}
             </div>
@@ -872,41 +977,48 @@ export default function Reviews() {
             {/* Main layout: stack on mobile, columns on md+ */}
             <div className="flex flex-1 overflow-hidden mt-20 flex-col md:flex-row">
                 {/* Left List (desktop/tablet) */}
-                <div className="hidden md:flex md:w-56 lg:w-64 xl:w-72 bg-gray-800 p-3 pt-4 flex-col h-[calc(100vh-80px)]">
-                    <h3 className="mb-2 font-bold">Danh sách thẻ</h3>
-                    <div
-                        className="flex-1 overflow-y-auto pr-2"
-                        style={{
-                            maxHeight: "calc(100vh - 80px)",
-                            scrollbarWidth: "thin",
-                            scrollbarColor: "#4B5563 #374151",
-                        }}
-                    >
-                        <style jsx>{`
-              .flex-1::-webkit-scrollbar { width: 6px; }
-              .flex-1::-webkit-scrollbar-track { background: #374151; border-radius: 3px; }
-              .flex-1::-webkit-scrollbar-thumb { background: #4B5563; border-radius: 3px; }
-              .flex-1::-webkit-scrollbar-thumb:hover { background: #6B7280; }
-            `}</style>
-                        {cards.map((c) => (
+                <div
+                    className={`hidden md:flex bg-gray-800 transition-all duration-200 flex-col h-[calc(100vh-80px)] overflow-hidden ${leftOpen ? "md:w-56 lg:w-64 xl:w-72 p-3 pt-4" : "md:w-0 p-0"}`}
+                    aria-expanded={leftOpen}
+                >
+                    {leftOpen && (
+                        <>
+                            <h3 className="mb-2 font-bold">Danh sách thẻ</h3>
                             <div
-                                key={c.id}
-                                draggable
-                                onDragStart={(e) => handleDragStartFromList(e, c)}
-                                className="p-2 mb-2 bg-gray-700 rounded cursor-grab hover:bg-gray-600 transition-colors"
+                                className="flex-1 overflow-y-auto pr-2"
+                                style={{
+                                    maxHeight: "calc(100vh - 80px)",
+                                    scrollbarWidth: "thin",
+                                    scrollbarColor: "#4B5563 #374151",
+                                }}
                             >
-                                <div className="font-bold text-sm">{c.id}</div>
-                                <div className="text-xs text-gray-300">Power: {c.power}</div>
-                                <div className="text-xs text-gray-400">{c.rarity}</div>
+                                <style>{`
+                                .flex-1::-webkit-scrollbar { width: 6px; }
+                                .flex-1::-webkit-scrollbar-track { background: #374151; border-radius: 3px; }
+                                .flex-1::-webkit-scrollbar-thumb { background: #4B5563; border-radius: 3px; }
+                                .flex-1::-webkit-scrollbar-thumb:hover { background: #6B7280; }
+                              `}</style>
+                                {cards.map((c) => (
+                                    <div
+                                        key={c.id}
+                                        draggable
+                                        onDragStart={(e) => handleDragStartFromList(e, c)}
+                                        className="p-2 mb-2 bg-gray-700 rounded cursor-grab hover:bg-gray-600 transition-colors"
+                                    >
+                                        <div className="font-bold text-sm">{c.id}</div>
+                                        <div className="text-xs text-gray-300">Power: {c.power}</div>
+                                        <div className="text-xs text-gray-400">{c.rarity}</div>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
-                    <button onClick={handleAddCard} className="mt-2 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded transition-colors">
-                        + Tạo thẻ mới
-                    </button>
-                    <button onClick={handleRemoveCardFromList} className="mt-2 py-2 px-3 bg-red-600 hover:bg-red-500 rounded transition-colors">
-                        - Xóa thẻ khỏi danh sách
-                    </button>
+                            <button onClick={handleAddCard} className="mt-2 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded transition-colors">
+                                + Tạo thẻ mới
+                            </button>
+                            <button onClick={handleRemoveCardFromList} className="mt-2 py-2 px-3 bg-red-600 hover:bg-red-500 rounded transition-colors">
+                                - Xóa thẻ khỏi danh sách
+                            </button>
+                        </>
+                    )}
                 </div>
 
                 {/* Map */}
@@ -937,6 +1049,42 @@ export default function Reviews() {
                         >
                             Actions
                         </button>
+                    </div>
+
+                    {/* Desktop toggles for side panels (appear when hovering near edges) */}
+                    {/* Left edge */}
+                    <div
+                        className="hidden md:block absolute top-1/2 -translate-y-1/2 left-0 z-50"
+                        onMouseEnter={() => setShowLeftToggle(true)}
+                        onMouseLeave={() => setShowLeftToggle(false)}
+                    >
+                        <div className="relative h-28 w-8">
+                            <button
+                                className={`absolute left-2 top-1/2 -translate-y-1/2 px-3 py-1 rounded bg-gray-800/80 backdrop-blur hover:bg-gray-700 transition-all duration-200 ${showLeftToggle ? "opacity-100 pointer-events-auto translate-x-0" : "opacity-0 pointer-events-none -translate-x-2"}`}
+                                onClick={() => setLeftOpen((v) => !v)}
+                                aria-expanded={leftOpen}
+                                aria-label="Toggle cards sidebar"
+                            >
+                                {leftOpen ? "Hide" : "Show"} Cards
+                            </button>
+                        </div>
+                    </div>
+                    {/* Right edge */}
+                    <div
+                        className="hidden md:block absolute top-1/2 -translate-y-1/2 right-0 z-50"
+                        onMouseEnter={() => setShowRightToggle(true)}
+                        onMouseLeave={() => setShowRightToggle(false)}
+                    >
+                        <div className="relative h-28 w-8">
+                            <button
+                                className={`absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 rounded bg-gray-800/80 backdrop-blur hover:bg-gray-700 transition-all duration-200 ${showRightToggle ? "opacity-100 pointer-events-auto translate-x-0" : "opacity-0 pointer-events-none translate-x-2"}`}
+                                onClick={() => setRightOpen((v) => !v)}
+                                aria-expanded={rightOpen}
+                                aria-label="Toggle actions sidebar"
+                            >
+                                {rightOpen ? "Hide" : "Show"} Actions
+                            </button>
+                        </div>
                     </div>
 
                     {/* Connections */}
@@ -1027,109 +1175,114 @@ export default function Reviews() {
                 </div>
 
                 {/* Right Panel (desktop/tablet) */}
-                <div className="hidden md:flex md:w-56 lg:w-64 xl:w-72 bg-gray-800 p-3 flex-col">
-                    <h3 className="mb-2 font-bold">Thao tác</h3>
-                    <button onClick={handleMerge} className="mb-2 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded transition-colors">
-                        Ghép thẻ
-                    </button>
-                    <button onClick={handleDelete} className="mb-2 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded transition-colors">
-                        Xóa thẻ
-                    </button>
-                    <button onClick={handleUpdate} className="mb-4 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded transition-colors">
-                        Cập nhật thẻ
-                    </button>
-                    <div className="flex-1"></div>
-                    {/* Minimap (desktop only) */}
-                    <div>
-                        <h4 className="text-sm mb-1">Minimap</h4>
-                        <div
-                            ref={minimapRef}
-                            onClick={handleMinimapClick}
-                            className="relative bg-gray-700 border border-gray-500"
-                            style={{ width: MINIMAP_SIZE, height: MINIMAP_SIZE, overflow: "hidden" }}  // <- add overflow hidden
-                        >
-                            {(() => {
-                                const rect = containerRef.current?.getBoundingClientRect()
-                                if (!rect) return null
+                <div
+                    className={`hidden md:flex bg-gray-800 transition-all duration-200 flex-col ${rightOpen ? "md:w-56 lg:w-64 xl:w-72 p-3" : "md:w-0 p-0 overflow-hidden"}`}
+                    aria-expanded={rightOpen}
+                >
+                    {rightOpen && (
+                        <>
+                            <h3 className="mb-2 font-bold">Thao tác</h3>
+                            <button onClick={handleMerge} className="mb-2 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded transition-colors">
+                                Ghép thẻ
+                            </button>
+                            <button onClick={handleDelete} className="mb-2 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded transition-colors">
+                                Xóa thẻ
+                            </button>
+                            <button onClick={handleUpdate} className="mb-4 py-2 px-3 bg-pink-600 hover:bg-pink-500 rounded transition-colors">
+                                Cập nhật thẻ
+                            </button>
+                            <div className="flex-1"></div>
+                            {/* Minimap (desktop only) */}
+                            <div>
+                                <h4 className="text-sm mb-1">Minimap</h4>
+                                <div
+                                    ref={minimapRef}
+                                    onClick={handleMinimapClick}
+                                    className="relative bg-gray-700 border border-gray-500"
+                                    style={{ width: MINIMAP_SIZE, height: MINIMAP_SIZE, overflow: "hidden" }}
+                                >
+                                    {(() => {
+                                        const rect = containerRef.current?.getBoundingClientRect()
+                                        if (!rect) return null
 
-                                const { minX, minY, maxX, maxY } = getContentBounds()
-                                const contentW = Math.max(1, maxX - minX)
-                                const contentH = Math.max(1, maxY - minY)
+                                        const { minX, minY, maxX, maxY } = getContentBounds()
+                                        const contentW = Math.max(1, maxX - minX)
+                                        const contentH = Math.max(1, maxY - minY)
 
-                                const scale = Math.min(
-                                    MINIMAP_SIZE / (contentW + MINIMAP_PAD * 2),
-                                    MINIMAP_SIZE / (contentH + MINIMAP_PAD * 2)
-                                )
+                                        const scale = Math.min(
+                                            MINIMAP_SIZE / (contentW + MINIMAP_PAD * 2),
+                                            MINIMAP_SIZE / (contentH + MINIMAP_PAD * 2)
+                                        )
 
-                                const toMiniX = (wx) => (wx - (minX - MINIMAP_PAD)) * scale
-                                const toMiniY = (wy) => (wy - (minY - MINIMAP_PAD)) * scale
+                                        const toMiniX = (wx) => (wx - (minX - MINIMAP_PAD)) * scale
+                                        const toMiniY = (wy) => (wy - (minY - MINIMAP_PAD)) * scale
 
-                                // viewport in world coords
-                                const viewX = -pan.x / zoom
-                                const viewY = -pan.y / zoom
-                                const viewW = rect.width / zoom
-                                const viewH = rect.height / zoom
+                                        // viewport in world coords
+                                        const viewX = -pan.x / zoom
+                                        const viewY = -pan.y / zoom
+                                        const viewW = rect.width / zoom
+                                        const viewH = rect.height / zoom
 
-                                // map to minimap space
-                                const vx = toMiniX(viewX)
-                                const vy = toMiniY(viewY)
-                                const vw = viewW * scale
-                                const vh = viewH * scale
+                                        // map to minimap space
+                                        const vx = toMiniX(viewX)
+                                        const vy = toMiniY(viewY)
+                                        const vw = viewW * scale
+                                        const vh = viewH * scale
 
-                                // clamp to the minimap box
-                                const clamp01 = (n, min, max) => Math.min(max, Math.max(min, n))
-                                const x0 = clamp01(vx, 0, MINIMAP_SIZE)
-                                const y0 = clamp01(vy, 0, MINIMAP_SIZE)
-                                const x1 = clamp01(vx + vw, 0, MINIMAP_SIZE)
-                                const y1 = clamp01(vy + vh, 0, MINIMAP_SIZE)
-                                const clampedView = {
-                                    left: x0,
-                                    top: y0,
-                                    width: Math.max(2, x1 - x0),
-                                    height: Math.max(2, y1 - y0),
-                                }
+                                        const clamp01 = (n, min, max) => Math.min(max, Math.max(min, n))
+                                        const x0 = clamp01(vx, 0, MINIMAP_SIZE)
+                                        const y0 = clamp01(vy, 0, MINIMAP_SIZE)
+                                        const x1 = clamp01(vx + vw, 0, MINIMAP_SIZE)
+                                        const y1 = clamp01(vy + vh, 0, MINIMAP_SIZE)
+                                        const clampedView = {
+                                            left: x0,
+                                            top: y0,
+                                            width: Math.max(2, x1 - x0),
+                                            height: Math.max(2, y1 - y0),
+                                        }
 
-                                return (
-                                    <>
-                                        {canvasCards.map((c) => {
-                                            const mx = toMiniX(c.x)
-                                            const my = toMiniY(c.y)
-                                            const mw = CARD_W * scale
-                                            const mh = CARD_H * scale
-                                            return (
+                                        return (
+                                            <>
+                                                {canvasCards.map((c) => {
+                                                    const mx = toMiniX(c.x)
+                                                    const my = toMiniY(c.y)
+                                                    const mw = CARD_W * scale
+                                                    const mh = CARD_H * scale
+                                                    return (
+                                                        <div
+                                                            key={c.uniqueKey}
+                                                            style={{
+                                                                position: "absolute",
+                                                                left: mx,
+                                                                top: my,
+                                                                width: mw,
+                                                                height: mh,
+                                                                background: "#ec4899",
+                                                                borderRadius: 2,
+                                                            }}
+                                                        />
+                                                    )
+                                                })}
                                                 <div
-                                                    key={c.uniqueKey}
                                                     style={{
                                                         position: "absolute",
-                                                        left: mx,
-                                                        top: my,
-                                                        width: mw,
-                                                        height: mh,
-                                                        background: "#ec4899",
-                                                        borderRadius: 2,
+                                                        left: clampedView.left,
+                                                        top: clampedView.top,
+                                                        width: clampedView.width,
+                                                        height: clampedView.height,
+                                                        border: "2px solid #10b981",
+                                                        background: "rgba(16,185,129,0.12)",
+                                                        pointerEvents: "none",
+                                                        boxShadow: "0 0 0 1px rgba(0,0,0,0.25) inset",
                                                     }}
                                                 />
-                                            )
-                                        })}
-                                        {/* clamped viewport outline */}
-                                        <div
-                                            style={{
-                                                position: "absolute",
-                                                left: clampedView.left,
-                                                top: clampedView.top,
-                                                width: clampedView.width,
-                                                height: clampedView.height,
-                                                border: "2px solid #10b981",
-                                                background: "rgba(16,185,129,0.12)",
-                                                pointerEvents: "none",
-                                                boxShadow: "0 0 0 1px rgba(0,0,0,0.25) inset",
-                                            }}
-                                        />
-                                    </>
-                                )
-                            })()}
-                        </div>
-                    </div>
+                                            </>
+                                        )
+                                    })()}
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 
