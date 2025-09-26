@@ -801,7 +801,7 @@ export default function Reviews() {
             {/* Main layout: stack on mobile, columns on md+ */}
             <div className="flex flex-1 overflow-hidden mt-20 flex-col md:flex-row">
                 {/* Left List (desktop/tablet) */}
-                <div className="hidden md:flex md:w-56 lg:w-64 xl:w-72 bg-gray-800 p-3 flex-col h-[calc(100vh-80px)]">
+                <div className="hidden md:flex md:w-56 lg:w-64 xl:w-72 bg-gray-800 p-3 pt-4 flex-col h-[calc(100vh-80px)]">
                     <h3 className="mb-2 font-bold">Danh sách thẻ</h3>
                     <div
                         className="flex-1 overflow-y-auto pr-2"
@@ -1006,7 +1006,7 @@ export default function Reviews() {
                 <div className="fixed inset-0 z-50 md:hidden">
                     <div className="absolute inset-0 bg-black/50" onClick={() => setShowCardsPanel(false)} />
                     <div
-                        className="absolute bottom-0 left-0 right-0 bg-gray-800 rounded-t-2xl p-4 max-h-[80vh] overflow-y-auto"
+                        className="absolute bottom-0 left-0 right-0 bg-gray-800 rounded-t-2xl px-4 pb-4 pt-6 max-h-[80vh] overflow-y-auto"
                         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
                     >
                         <div className="flex items-center justify-between mb-3">
@@ -1046,7 +1046,7 @@ export default function Reviews() {
                 <div className="fixed inset-0 z-50 md:hidden">
                     <div className="absolute inset-0 bg-black/50" onClick={() => setShowActionsPanel(false)} />
                     <div
-                        className="absolute bottom-0 left-0 right-0 bg-gray-800 rounded-t-2xl p-4 max-h-[80vh] overflow-y-auto"
+                        className="absolute bottom-0 left-0 right-0 bg-gray-800 rounded-t-2xl px-4 pb-4 pt-6 max-h-[80vh] overflow-y-auto"
                         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
                     >
                         <div className="flex items-center justify-between mb-3">
