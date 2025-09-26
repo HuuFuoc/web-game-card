@@ -18,6 +18,7 @@ import troiImage from "../assets/troi.png";
 import nightImage from "../assets/night.png";
 
 import { FaFacebookF, FaTwitter, FaInstagram, FaDiscord } from "react-icons/fa";
+import "../Home.css"; // ✅ import file CSS đã tách
 
 const Home = () => {
   useEffect(() => {
@@ -137,25 +138,13 @@ const Home = () => {
           </p>
 
           <div className="flex flex-col md:flex-row justify-center gap-6">
-            <Link
-              to="/play"
-              className="bg-gradient-to-r from-pink-500 to-purple-600 px-8 py-4 rounded-lg font-bold shadow-lg
-                         hover:scale-110 hover:shadow-pink-500/70 transition-all duration-300"
-            >
+            <Link to="/play" className="btn-gradient">
               🎮 Play Now
             </Link>
-            <Link
-              to="/deck"
-              className="border-2 border-pink-400 px-8 py-4 rounded-lg font-semibold 
-                         hover:bg-pink-500 hover:text-black hover:scale-110 transition-all duration-300"
-            >
+            <Link to="/deck" className="btn-outline">
               🃏 Choose Deck
             </Link>
-            <Link
-              to="/login"
-              className="border-2 border-gray-400 px-8 py-4 rounded-lg font-semibold 
-                         hover:bg-gray-300 hover:text-black hover:scale-110 transition-all duration-300"
-            >
+            <Link to="/login" className="btn-outline-gray">
               🔑 Login
             </Link>
           </div>
@@ -178,21 +167,28 @@ const Home = () => {
               key={idx}
               data-aos="zoom-in"
               data-aos-delay={idx * 150}
-              className="bg-gray-800 rounded-2xl overflow-hidden shadow-xl 
-                         transform transition-all duration-500 hover:scale-105 hover:shadow-yellow-400/50"
+              className="flip-card"
             >
-              <img
-                src={card.image}
-                alt={card.title}
-                className="w-full h-64 object-cover transition-transform duration-500 hover:scale-110"
-              />
-              <div className="p-6 text-left">
-                <h3 className="text-2xl font-bold text-yellow-400 mb-3">
-                  {card.title}
-                </h3>
-                <p className="text-gray-300 text-sm leading-relaxed">
-                  {card.desc}
-                </p>
+              <div className="flip-card-inner">
+                {/* Front */}
+                <div className="flip-card-front">
+                  <img
+                    src={card.image}
+                    alt={card.title}
+                    className="w-full h-64 object-cover"
+                  />
+                  <h3 className="text-xl font-bold text-yellow-400 mt-4">
+                    {card.title}
+                  </h3>
+                </div>
+
+                {/* Back */}
+                <div className="flip-card-back">
+                  <h3 className="text-2xl font-bold text-yellow-300 mb-3">
+                    {card.title}
+                  </h3>
+                  <p className="text-gray-200 text-sm">{card.desc}</p>
+                </div>
               </div>
             </div>
           ))}

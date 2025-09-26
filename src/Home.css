@@ -1,0 +1,81 @@
+/* Glow Animation */
+@keyframes text-glow {
+  0%, 100% { text-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff; }
+  50% { text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff; }
+}
+.animate-text-glow {
+  animation: text-glow 2s infinite alternate;
+}
+
+/* Buttons */
+.btn-gradient {
+  background: linear-gradient(to right, #ec4899, #8b5cf6);
+  padding: 1rem 2rem;
+  border-radius: 0.75rem;
+  font-weight: bold;
+  transition: all 0.3s;
+  box-shadow: 0 0 15px rgba(236,72,153,0.6);
+}
+.btn-gradient:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 25px rgba(236,72,153,0.9);
+}
+
+.btn-outline {
+  border: 2px solid #ec4899;
+  padding: 1rem 2rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+.btn-outline:hover {
+  background: #ec4899;
+  color: black;
+  transform: scale(1.1);
+}
+
+.btn-outline-gray {
+  border: 2px solid #9ca3af;
+  padding: 1rem 2rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+.btn-outline-gray:hover {
+  background: #d1d5db;
+  color: black;
+  transform: scale(1.1);
+}
+
+/* Flip Card */
+.flip-card {
+  perspective: 1000px;
+}
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  transition: transform 0.8s;
+  transform-style: preserve-3d;
+}
+.flip-card:hover .flip-card-inner {
+  transform: rotateY(180deg);
+}
+.flip-card-front, .flip-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 1rem;
+  background: #1f2937;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  box-shadow: 0 0 20px rgba(255,255,255,0.1);
+}
+.flip-card-back {
+  transform: rotateY(180deg);
+  background: linear-gradient(145deg, #111827, #1f2937);
+}
