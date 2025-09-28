@@ -1110,171 +1110,76 @@ export default function Reviews() {
                         </div>
                     </div>
 
-                    {/* Connections (smoother orthogonal routing with circular corners) */}
+                    {/* Connections (simple 90° orthogonal, no edge routing) */}
                     <svg className="absolute left-0 top-0 w-full h-full pointer-events-none">
-                        {(() => {
-                            const ROW_MERGE = CARD_H * 0.5
-                            const rows = []
-                                ;[...canvasCards]
-                                    .sort((a, b) => a.y - b.y)
-                                    .forEach((c) => {
-                                        const top = c.y
-                                        const bottom = c.y + CARD_H
-                                        if (rows.length === 0) {
-                                            rows.push({ top, bottom, sum: c.y, count: 1 })
-                                        } else {
-                                            const last = rows[rows.length - 1]
-                                            if (top - last.bottom < ROW_MERGE) {
-                                                last.top = Math.min(last.top, top)
-                                                last.bottom = Math.max(last.bottom, bottom)
-                                                last.sum += c.y
-                                                last.count += 1
-                                            } else {
-                                                rows.push({ top, bottom, sum: c.y, count: 1 })
-                                            }
-                                        }
-                                    })
+                        {relations.map((r, i) => {
+                            const from = canvasCards.find((c) => c.uniqueKey === r.fromKey)
+                            const to = canvasCards.find((c) => c.uniqueKey === r.toKey)
+                            if (!from || !to) return null
 
-                            const rowCenters = rows.map((r) => r.sum / r.count + CARD_H / 2)
-                            const bandsWorld = []
-                            for (let i = 0; i < rows.length - 1; i++) {
-                                bandsWorld.push((rows[i].bottom + rows[i + 1].top) / 2)
-                            }
-                            const bandsPx = bandsWorld.map((y) => y * zoom + pan.y)
+                            const A = instancePixelPos(from)
+                            const B = instancePixelPos(to)
 
-                            const nearestRowIndex = (centerWorldY) => {
-                                if (rowCenters.length === 0) return -1
-                                let best = 0, bestd = Infinity
-                                for (let i = 0; i < rowCenters.length; i++) {
-                                    const d = Math.abs(rowCenters[i] - centerWorldY)
-                                    if (d < bestd) { bestd = d; best = i }
-                                }
-                                return best
-                            }
+                            const startX = A.px + A.w / 2
+                            const startY = A.py + A.h
+                            const endX = B.px + B.w / 2
+                            const endY = B.py
 
-                            // Magic k for circular-looking cubic corners
-                            const K = 0.55191502449
+                            // Emphasis
+                            const isActive = !hoveredCard || hoveredCard.uniqueKey === r.fromKey || hoveredCard.uniqueKey === r.toKey
+                            const mainStroke = isActive ? "#000" : "rgba(0,0,0,0.12)"
+                            const outlineStroke = isActive ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.18)"
+                            const dash = isActive ? undefined : "6 6"
+                            const arrowFill = isActive ? "#111" : "rgba(17,17,17,0.18)"
 
-                            return relations.map((r, i) => {
-                                const from = canvasCards.find((c) => c.uniqueKey === r.fromKey)
-                                const to = canvasCards.find((c) => c.uniqueKey === r.toKey)
-                                if (!from || !to) return null
+                            // Arrow geometry
+                            const arrowW = 28
+                            const arrowH = 14
+                            const arrowTipOffset = 6
+                            const tipY = endY - arrowTipOffset
+                            const headBaseY = tipY - arrowH
 
-                                const A = instancePixelPos(from)
-                                const B = instancePixelPos(to)
+                            // Single dogleg: down to middle Y, across to target X, then up/down to arrow base
+                            const midY = Math.round((startY + endY) / 2)
 
-                                const startX = A.px + A.w / 2
-                                const startY = A.py + A.h
-                                const endX = B.px + B.w / 2
-                                const endY = B.py
+                            const d = [
+                                `M ${startX} ${startY}`,
+                                `L ${startX} ${midY}`,
+                                `L ${endX} ${midY}`,
+                                `L ${endX} ${headBaseY}`,
+                            ].join(" ")
 
-                                // Hierarchical band
-                                let baseLaneY = startY + (endY - startY) / 2
-                                const sRowIdx = nearestRowIndex(from.y + CARD_H / 2)
-                                const tRowIdx = nearestRowIndex(to.y + CARD_H / 2)
-                                if (bandsPx.length > 0 && sRowIdx !== -1 && tRowIdx !== -1 && sRowIdx !== tRowIdx) {
-                                    const minIdx = Math.min(sRowIdx, tRowIdx)
-                                    const maxIdx = Math.max(sRowIdx, tRowIdx)
-                                    const betweenCount = Math.max(1, maxIdx - minIdx)
-                                    const middleOffset = Math.floor((betweenCount - 1) / 2)
-                                    const bandIdx = Math.min(minIdx + middleOffset, bandsPx.length - 1)
-                                    baseLaneY = bandsPx[bandIdx]
-                                }
+                            return (
+                                <g key={i}>
+                                    <path
+                                        d={d}
+                                        fill="none"
+                                        stroke={outlineStroke}
+                                        strokeWidth={6}
+                                        strokeLinecap="square"
+                                        strokeLinejoin="miter"
+                                    />
+                                    <path
+                                        d={d}
+                                        fill="none"
+                                        stroke={mainStroke}
+                                        strokeWidth={3}
+                                        strokeLinecap="square"
+                                        strokeLinejoin="miter"
+                                        strokeDasharray={dash}
+                                    />
 
-                                // Spread siblings from same source
-                                const siblingsFrom = relations.filter((rr) => rr.fromKey === r.fromKey)
-                                const orderedFrom = [...siblingsFrom].sort((a, b) => a.toKey.localeCompare(b.toKey))
-                                const idxInFrom = orderedFrom.findIndex((x) => x === r)
-                                const LANE_GAP = 18
-                                const laneY = baseLaneY + (idxInFrom - (orderedFrom.length - 1) / 2) * LANE_GAP
-
-                                // Fan-in near target
-                                const siblingsTo = relations.filter((rr) => rr.toKey === r.toKey)
-                                const orderedTo = [...siblingsTo].sort((a, b) => {
-                                    const af = canvasCards.find((c) => c.uniqueKey === a.fromKey)
-                                    const bf = canvasCards.find((c) => c.uniqueKey === b.fromKey)
-                                    return (af?.x ?? 0) - (bf?.x ?? 0)
-                                })
-                                const idxInTo = orderedTo.findIndex((x) => x === r)
-                                const TARGET_FAN_GAP = 18
-                                const approachX = endX + (idxInTo - (orderedTo.length - 1) / 2) * TARGET_FAN_GAP
-
-                                // Emphasis
-                                const isActive =
-                                    !hoveredCard ||
-                                    hoveredCard.uniqueKey === r.fromKey ||
-                                    hoveredCard.uniqueKey === r.toKey
-
-                                const mainStroke = isActive ? "#000" : "rgba(0,0,0,0.12)"
-                                const outlineStroke = isActive ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.18)"
-                                const dash = isActive ? undefined : "6 6"
-                                const arrowFill = isActive ? "#111" : "rgba(17,17,17,0.18)"
-
-                                // Arrow geometry
-                                const arrowW = 28
-                                const arrowH = 15
-                                const arrowTipOffset = 6
-                                const tipY = endY - arrowTipOffset
-                                const headBaseY = tipY - arrowH
-
-                                // Corner radius (auto-clamped to available segment lengths)
-                                const R = 12
-                                const small = 0.0001
-                                const r1 = Math.max(
-                                    Math.min(R, Math.abs(laneY - startY), Math.abs(approachX - startX)),
-                                    small
-                                )
-                                const r2 = Math.max(
-                                    Math.min(R, Math.abs(headBaseY - laneY), Math.abs(approachX - startX)),
-                                    small
-                                )
-                                const r3 = Math.max(
-                                    Math.min(R, Math.abs(endX - approachX), Math.abs(headBaseY - laneY)),
-                                    small
-                                )
-                                const s1 = Math.sign(approachX - startX) || 1
-                                const s3 = Math.sign(endX - approachX) || 1
-
-                                // Build cubic-bezier quarter-circles (no “twist” like quadratic with corner control point)
-                                const d = [
-                                    `M ${startX} ${startY}`,
-
-                                    // down to just before the lane corner
-                                    `L ${startX} ${laneY - r1}`,
-                                    // vertical -> horizontal (towards approachX)
-                                    `C ${startX} ${laneY - r1 + K * r1} ${startX + s1 * (r1 - K * r1)} ${laneY} ${startX + s1 * r1} ${laneY}`,
-
-                                    // straight to just before vertical drop near target
-                                    `L ${approachX - s1 * r2} ${laneY}`,
-                                    // horizontal -> vertical down
-                                    `C ${approachX - s1 * (r2 - K * r2)} ${laneY} ${approachX} ${laneY + K * r2} ${approachX} ${laneY + r2}`,
-
-                                    // down to just before final join
-                                    `L ${approachX} ${headBaseY - r3}`,
-                                    // vertical -> horizontal (towards endX)
-                                    `C ${approachX} ${headBaseY - r3 + K * r3} ${approachX + s3 * (r3 - K * r3)} ${headBaseY} ${approachX + s3 * r3} ${headBaseY}`,
-
-                                    // final short straight into arrow base
-                                    `L ${endX} ${headBaseY}`,
-                                ].join(" ")
-
-                                return (
-                                    <g key={i}>
-                                        <path d={d} fill="none" stroke={outlineStroke} strokeWidth={6} strokeLinecap="round" strokeLinejoin="round" />
-                                        <path d={d} fill="none" stroke={mainStroke} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={dash} />
-
-                                        <polygon
-                                            points={`${endX - (arrowW / 2 + 2)},${headBaseY - 1} ${endX + (arrowW / 2 + 2)},${headBaseY - 1} ${endX},${tipY + 1}`}
-                                            fill={outlineStroke}
-                                        />
-                                        <polygon
-                                            points={`${endX - arrowW / 2},${headBaseY} ${endX + arrowW / 2},${headBaseY} ${endX},${tipY}`}
-                                            fill={arrowFill}
-                                        />
-                                    </g>
-                                )
-                            })
-                        })()}
+                                    <polygon
+                                        points={`${endX - (arrowW / 2 + 2)},${headBaseY - 1} ${endX + (arrowW / 2 + 2)},${headBaseY - 1} ${endX},${tipY + 1}`}
+                                        fill={outlineStroke}
+                                    />
+                                    <polygon
+                                        points={`${endX - arrowW / 2},${headBaseY} ${endX + arrowW / 2},${headBaseY} ${endX},${tipY}`}
+                                        fill={arrowFill}
+                                    />
+                                </g>
+                            )
+                        })}
                     </svg>
 
                     {/* Cards */}
